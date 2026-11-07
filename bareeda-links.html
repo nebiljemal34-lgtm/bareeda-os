@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bareeda Injera — Connect With Us</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px 48px;
+  }
+
+  .logo-area {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .logo-area h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f0c040;
+    margin-bottom: 6px;
+  }
+
+  .logo-area p {
+    font-size: 0.95rem;
+    color: #aaa;
+  }
+
+  .links {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .link-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    border-radius: 14px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
+  }
+
+  .link-btn:hover, .link-btn:active {
+    transform: scale(1.02);
+    background: rgba(255,255,255,0.14);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .link-btn .emoji {
+    font-size: 1.5rem;
+    width: 36px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .link-btn .text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .link-btn .text .name {
+    font-size: 1rem;
+  }
+
+  .link-btn .text .handle {
+    font-size: 0.78rem;
+    color: #aaa;
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
+  .link-btn .arrow {
+    margin-left: auto;
+    color: #666;
+    font-size: 1.2rem;
+  }
+
+  /* Brand color accents on hover */
+  .link-btn[data-brand="phone"]     { border-left: 3px solid #4caf50; }
+  .link-btn[data-brand="whatsapp"]  { border-left: 3px solid #25D366; }
+  .link-btn[data-brand="facebook"]  { border-left: 3px solid #1877F2; }
+  .link-btn[data-brand="tiktok"]    { border-left: 3px solid #fe2c55; }
+  .link-btn[data-brand="telegram"]  { border-left: 3px solid #2AABEE; }
+  .link-btn[data-brand="instagram"] { border-left: 3px solid #E4405F; }
+  .link-btn[data-brand="website"]   { border-left: 3px solid #f0c040; }
+
+  footer {
+    margin-top: 40px;
+    color: #555;
+    font-size: 0.78rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="logo-area">
+  <h1>Bareeda Injera</h1>
+  <p>Choose how you'd like to connect</p>
+</div>
+
+<div class="links">
+  <a class="link-btn" data-brand="phone" href="tel:+251940434748">
+    <span class="emoji">📞</span>
+    <span class="text"><span class="name">Call Us</span><span class="handle">0940434748 / 0970880000</span></span>
+    <span class="arrow">›</span>
+  </a>
+
+  <a class="link-btn" data-brand="whatsapp" href="https://wa.me/251940434748" target="_blank" rel="noopener">
+    <span class="emoji">💬</span>
+    <span class="text"><span class="name">WhatsApp</span><span class="handle">+251 940 434 748</span></span>
+    <span class="arrow">›</span>
+  </a>
+
+  <a class="link-btn" data-brand="facebook" href="https://www.facebook.com/bareedainjera" target="_blank" rel="noopener">
+    <span class="emoji">📘</span>
+    <span class="text"><span class="name">Facebook</span><span class="handle">@bareedainjera</span></span>
+    <span class="arrow">›</span>
+  </a>
+
+  <a class="link-btn" data-brand="tiktok" href="https://www.tiktok.com/@bareedainjera" target="_blank" rel="noopener">
+    <span class="emoji">🎵</span>
+    <span class="text"><span class="name">TikTok</span><span class="handle">@bareedainjera</span></span>
+    <span class="arrow">›</span>
+  </a>
+
+  <a class="link-btn" data-brand="telegram" href="https://t.me/bareeda_injera" target="_blank" rel="noopener">
+    <span class="emoji">✈️</span>
+    <span class="text"><span class="name">Telegram</span><span class="handle">@bareeda_injera</span></span>
+    <span class="arrow">›</span>
+  </a>
+
+  <a class="link-btn" data-brand="instagram" href="https://www.instagram.com/bareeda_injera" target="_blank" rel="noopener">
+    <span class="emoji">📸</span>
+    <span class="text"><span class="name">Instagram</span><span class="handle">@bareeda_injera</span></span>
+    <span class="arrow">›</span>
+  </a>
+
+  <a class="link-btn" data-brand="website" href="https://www.bareeda-injera.com" target="_blank" rel="noopener">
+    <span class="emoji">🌐</span>
+    <span class="text"><span class="name">Website</span><span class="handle">www.bareeda-injera.com</span></span>
+    <span class="arrow">›</span>
+  </a>
+</div>
+
+<footer>Bareeda Injera &copy; 2026</footer>
+
+</body>
+</html>

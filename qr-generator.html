@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bareeda Injera — Business Card QR Code</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  h1 { color: #f0c040; font-size: 1.5rem; margin-bottom: 6px; }
+  .subtitle { color: #888; font-size: 0.85rem; margin-bottom: 28px; text-align: center; }
+  .qr-card {
+    background: #fff;
+    padding: 28px;
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .qr-card canvas { display: block; }
+  .qr-label {
+    margin-top: 14px;
+    color: #1a1a2e;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+  .qr-label span { color: #666; font-weight: 400; font-size: 0.75rem; display: block; margin-top: 2px; }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: #f0c040; color: #1a1a2e; }
+  .btn-primary:hover { background: #ffd966; }
+  .btn-secondary { background: rgba(255,255,255,0.1); color: #eee; border: 1px solid rgba(255,255,255,0.15); }
+  .btn-secondary:hover { background: rgba(255,255,255,0.18); }
+  .info {
+    margin-top: 24px;
+    color: #666;
+    font-size: 0.78rem;
+    text-align: center;
+    max-width: 340px;
+    line-height: 1.6;
+  }
+  .info code {
+    background: rgba(255,255,255,0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #f0c040;
+    font-size: 0.75rem;
+  }
+  .size-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .size-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    background: transparent;
+    color: #aaa;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .size-btn.active {
+    background: #f0c040;
+    color: #1a1a2e;
+    border-color: #f0c040;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<h1>Bareeda Injera</h1>
+<p class="subtitle">Business Card QR Code — Scan to see all our links</p>
+
+<div class="size-selector">
+  <button class="size-btn active" data-size="300">300px (Card)</button>
+  <button class="size-btn" data-size="500">500px (Print)</button>
+  <button class="size-btn" data-size="800">800px (High-res)</button>
+</div>
+
+<div class="qr-card" id="qr-card">
+  <div id="qr-box"></div>
+  <div class="qr-label">Scan to connect<span>www.bareeda-injera.com/links</span></div>
+</div>
+
+<div class="actions">
+  <button class="btn btn-primary" id="dl-png">Download PNG</button>
+  <button class="btn btn-secondary" id="dl-svg">Download SVG</button>
+</div>
+
+<p class="info">
+  Upload <code>links/index.html</code> to your cPanel File Manager at<br>
+  <code>public_html/links/</code> — then this QR code goes live.
+</p>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+(function() {
+  var URL = 'https://www.bareeda-injera.com/links';
+  var currentSize = 300;
+  var qrInstance = null;
+
+  function generate(size) {
+    currentSize = size;
+    var box = document.getElementById('qr-box');
+    box.innerHTML = '';
+    qrInstance = new QRCode(box, {
+      text: URL,
+      width: size,
+      height: size,
+      colorDark: '#1a1a2e',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H,
+    });
+  }
+
+  generate(300);
+
+  document.querySelectorAll('.size-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.size-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      generate(parseInt(btn.dataset.size));
+    });
+  });
+
+  document.getElementById('dl-png').addEventListener('click', function() {
+    var canvas = document.querySelector('#qr-box canvas');
+    if (canvas) {
+      var a = document.createElement('a');
+      a.download = 'bareeda-injera-qr-' + currentSize + 'px.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    }
+  });
+
+  document.getElementById('dl-svg').addEventListener('click', function() {
+    var canvas = document.querySelector('#qr-box canvas');
+    if (!canvas) return;
+    var size = canvas.width;
+    var ctx = canvas.getContext('2d');
+    var imageData = ctx.getImageData(0, 0, size, size);
+    var data = imageData.data;
+    var moduleSize = Math.round(size / 33);
+
+    var svg = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    svg += '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">\n';
+    svg += '<rect width="' + size + '" height="' + size + '" fill="#ffffff"/>\n';
+
+    for (var y = 0; y < size; y += moduleSize) {
+      for (var x = 0; x < size; x += moduleSize) {
+        var idx = (y * size + x) * 4;
+        if (data[idx] < 128) {
+          svg += '<rect x="' + x + '" y="' + y + '" width="' + moduleSize + '" height="' + moduleSize + '" fill="#1a1a2e"/>\n';
+        }
+      }
+    }
+    svg += '</svg>';
+
+    var blob = new Blob([svg], { type: 'image/svg+xml' });
+    var a = document.createElement('a');
+    a.download = 'bareeda-injera-qr-' + currentSize + 'px.svg';
+    a.href = URL.createObjectURL(blob);
+    a.click();
+  });
+})();
+</script>
+
+</body>
+</html>

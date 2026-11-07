@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bareeda Injera — Social QR Codes</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #f0c040;
+    margin-bottom: 6px;
+  }
+
+  header p {
+    font-size: 0.95rem;
+    color: #aaa;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: #16213e;
+    border: 1px solid #2a2a4a;
+    border-radius: 16px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(240, 192, 64, 0.15);
+  }
+
+  .card .icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+
+  .card .label {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .card .handle {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-bottom: 16px;
+    word-break: break-all;
+  }
+
+  .qr-wrap {
+    background: #fff;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .qr-wrap canvas, .qr-wrap img {
+    display: block;
+    border-radius: 4px;
+  }
+
+  .card a.btn {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1a1a2e;
+    background: #f0c040;
+    transition: background 0.2s;
+  }
+
+  .card a.btn:hover {
+    background: #ffd966;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 40px;
+    color: #666;
+    font-size: 0.8rem;
+  }
+
+  /* Color accents per platform */
+  .card[data-platform="whatsapp"] .icon { color: #25D366; }
+  .card[data-platform="facebook"]  .icon { color: #1877F2; }
+  .card[data-platform="tiktok"]    .icon { color: #fe2c55; }
+  .card[data-platform="telegram"]  .icon { color: #2AABEE; }
+  .card[data-platform="instagram"] .icon { color: #E4405F; }
+  .card[data-platform="website"]   .icon { color: #f0c040; }
+  .card[data-platform="phone"]     .icon { color: #4caf50; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Bareeda Injera</h1>
+  <p>Scan any QR code to open the link directly in the app</p>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<footer>QR codes are generated locally in your browser — no data leaves this page.</footer>
+
+<script>
+const platforms = [
+  {
+    key: 'phone',
+    icon: '📞',
+    label: 'Call Us',
+    handle: '0940434748 / 0970880000',
+    url: 'tel:+251940434748',
+  },
+  {
+    key: 'whatsapp',
+    icon: '💬',
+    label: 'WhatsApp',
+    handle: '+251 940 434 748',
+    url: 'https://wa.me/251940434748',
+  },
+  {
+    key: 'facebook',
+    icon: '📘',
+    label: 'Facebook',
+    handle: '@bareedainjera',
+    url: 'https://www.facebook.com/bareedainjera',
+  },
+  {
+    key: 'tiktok',
+    icon: '🎵',
+    label: 'TikTok',
+    handle: '@bareedainjera',
+    url: 'https://www.tiktok.com/@bareedainjera',
+  },
+  {
+    key: 'telegram',
+    icon: '✈️',
+    label: 'Telegram',
+    handle: '@bareeda_injera',
+    url: 'https://t.me/bareeda_injera',
+  },
+  {
+    key: 'instagram',
+    icon: '📸',
+    label: 'Instagram',
+    handle: '@bareeda_injera',
+    url: 'https://www.instagram.com/bareeda_injera',
+  },
+  {
+    key: 'website',
+    icon: '🌐',
+    label: 'Website',
+    handle: 'www.bareeda-injera.com',
+    url: 'https://www.bareeda-injera.com',
+  },
+];
+
+const grid = document.getElementById('grid');
+
+platforms.forEach(p => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.platform = p.key;
+
+  card.innerHTML = `
+    <div class="icon">${p.icon}</div>
+    <div class="label">${p.label}</div>
+    <div class="handle">${p.handle}</div>
+    <div class="qr-wrap" id="qr-${p.key}"></div>
+    <a class="btn" href="${p.url}" target="_blank" rel="noopener">Open ${p.label}</a>
+  `;
+
+  grid.appendChild(card);
+
+  // Generate QR code after the element is in the DOM
+  requestAnimationFrame(() => {
+    new QRCode(document.getElementById(`qr-${p.key}`), {
+      text: p.url,
+      width: 180,
+      height: 180,
+      colorDark: '#1a1a2e',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  });
+});
+</script>
+
+</body>
+</html>
