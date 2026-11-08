@@ -19,7 +19,7 @@ $phoneHref = preg_replace('/[^0-9+]/', '', $contactPhone);
 
 <!-- ═══ Page Header ═══ -->
 <section class="page-header">
-    <h1>Contact Us &middot; አግኙን</h1>
+    <h1>Contact Us</h1>
     <p class="amharic-subtitle">We'd love to hear from you. Reach out anytime.</p>
 </section>
 

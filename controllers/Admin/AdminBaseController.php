@@ -14,6 +14,9 @@ class AdminBaseController
     {
         $this->db = Database::getInstance();
         $this->auth = new Auth();
+
+        // SEC-06 FIX: Enforce admin authentication in all admin controllers
+        $this->auth->requireAdmin();
     }
 
     /**

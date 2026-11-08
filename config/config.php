@@ -37,9 +37,22 @@ define('LOGIN_LOCKOUT_MINUTES', 15);
 
 // Cron endpoint secret key — CHANGE THIS to a random string in production!
 // The cron URL must include ?key=<this value> to be accepted.
-define('CRON_SECRET_KEY', getenv('CRON_SECRET_KEY') ?: 'CHANGE_ME_CRON_SECRET_KEY_IN_PRODUCTION');
+$_cron_raw = getenv('CRON_SECRET_KEY') ?: '';
+define('CRON_SECRET_KEY', $_cron_raw);
+define('CRON_SECRET_IS_PLACEHOLDER', empty($_cron_raw)
+    || $_cron_raw === 'CHANGE_ME_CRON_SECRET_KEY_IN_PRODUCTION'
+    || strlen($_cron_raw) < 16);
+unset($_cron_raw);
 define('PAYMENT_MODE', getenv('PAYMENT_MODE') ?: (defined('APP_ENV') && APP_ENV === 'production' ? 'disabled' : 'simulation'));
-define('PAYMENT_WEBHOOK_SECRET', getenv('PAYMENT_WEBHOOK_SECRET') ?: (defined('APP_ENV') && APP_ENV === 'production' ? '' : 'local-simulation-secret'));
+
+// BLOCKER 1 FIX: Fail-closed for PAYMENT_WEBHOOK_SECRET (same pattern as CRON_SECRET_KEY)
+$_webhook_raw = getenv('PAYMENT_WEBHOOK_SECRET') ?: '';
+define('PAYMENT_WEBHOOK_SECRET', $_webhook_raw);
+define('PAYMENT_WEBHOOK_IS_PLACEHOLDER', empty($_webhook_raw)
+    || $_webhook_raw === 'local-simulation-secret'
+    || $_webhook_raw === 'CHANGE_ME_IN_PRODUCTION'
+    || strlen($_webhook_raw) < 16);
+unset($_webhook_raw);
 
 // ─── Currency / Locale ─────────────────────────────────────
 define('CURRENCY_CODE', 'ETB');
@@ -75,6 +88,15 @@ define('SESSION_SECURE_COOKIE', filter_var(
     getenv('SESSION_SECURE_COOKIE') ?: (defined('APP_ENV') && APP_ENV === 'production' ? '1' : '0'),
     FILTER_VALIDATE_BOOLEAN
 ));
+
+// G-04 FIX: Use project-local session path outside web root
+$_sessionPath = BASE_PATH . 'storage/sessions/';
+if (!is_dir($_sessionPath)) {
+    @mkdir($_sessionPath, 0700, true);
+}
+ini_set('session.save_path', $_sessionPath);
+unset($_sessionPath);
+
 ini_set('session.cookie_httponly', 1);
 ini_set('session.cookie_secure', SESSION_SECURE_COOKIE ? '1' : '0');
 ini_set('session.use_strict_mode', 1);

@@ -18,11 +18,18 @@ class CronController extends BaseController
      */
     public function processSubscriptions(): void
     {
+        // SEC-02 FIX: Fail closed if secret key is unset or placeholder
+        if (CRON_SECRET_IS_PLACEHOLDER) {
+            http_response_code(503);
+            json_response(['success' => false, 'error' => 'Cron not configured'], 503);
+            return;
+        }
+
         // Verify cron secret key
         $providedKey = $_GET['key'] ?? '';
-        $secretKey   = defined('CRON_SECRET_KEY') ? CRON_SECRET_KEY : '';
+        $secretKey   = CRON_SECRET_KEY;
 
-        if (empty($secretKey) || empty($providedKey) || !hash_equals($secretKey, $providedKey)) {
+        if (empty($providedKey) || !hash_equals($secretKey, $providedKey)) {
             http_response_code(403);
             json_response(['success' => false, 'error' => 'Forbidden'], 403);
             return;
@@ -47,10 +54,17 @@ class CronController extends BaseController
      */
     public function telegram(): void
     {
-        $providedKey = $_GET['key'] ?? '';
-        $secretKey   = defined('CRON_SECRET_KEY') ? CRON_SECRET_KEY : '';
+        // SEC-02 FIX: Fail closed if secret key is unset or placeholder
+        if (CRON_SECRET_IS_PLACEHOLDER) {
+            http_response_code(503);
+            json_response(['success' => false, 'error' => 'Cron not configured'], 503);
+            return;
+        }
 
-        if (empty($secretKey) || empty($providedKey) || !hash_equals($secretKey, $providedKey)) {
+        $providedKey = $_GET['key'] ?? '';
+        $secretKey   = CRON_SECRET_KEY;
+
+        if (empty($providedKey) || !hash_equals($secretKey, $providedKey)) {
             http_response_code(403);
             json_response(['success' => false, 'error' => 'Forbidden'], 403);
             return;

@@ -25,6 +25,10 @@ class AdminSettingController extends AdminBaseController
         foreach ($keys as $key) {
             $values[$key] = trim((string) ($_POST[$key] ?? ''));
         }
+        // SEC-09 FIX: Sanitize announcement — strip HTML and cap length
+        if (isset($values['announcement'])) {
+            $values['announcement'] = substr(strip_tags($values['announcement']), 0, 2000);
+        }
         $values['accepting_orders'] = isset($_POST['accepting_orders']) ? '1' : '0';
 
         if ($values['site_name'] === '' || $values['business_city'] === '') {

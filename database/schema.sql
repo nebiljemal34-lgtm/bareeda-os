@@ -313,9 +313,7 @@ CREATE TABLE IF NOT EXISTS `telegram_outbox` (
 -- SAMPLE DATA
 -- ============================================================
 
--- Admin user (DEFAULT PASSWORD — change immediately after first login!)
-INSERT INTO `users` (`email`, `password_hash`, `first_name`, `last_name`, `phone`, `role`) VALUES
-('admin@bareeda-injera.com', '$2y$12$8HPLu2dR50mu3e//te6wx.R/Sp.qoyiV787cEf8soiiQcXKRB2FdW', 'Bareeda', 'Admin', '+251940434748', 'admin');
+-- BLOCKER 2 FIX: Admin seed removed. Use bin/create-admin.php to create the first admin.
 
 -- Categories
 INSERT INTO `categories` (`name`, `name_am`, `sort_order`) VALUES

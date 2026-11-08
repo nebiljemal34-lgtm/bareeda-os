@@ -100,7 +100,7 @@
                             <td><?= sanitize($order['first_name'] . ' ' . $order['last_name']) ?></td>
                             <td class="adm-text-muted"><?= formatDate($order['created_at'], 'M j, g:ia') ?></td>
                             <td class="adm-fw-600"><?= formatPrice((float) $order['total']) ?></td>
-                            <td><span class="adm-badge adm-badge-<?= $order['status'] ?>"><?= str_replace('_', ' ', $order['status']) ?></span></td>
+                            <td><span class="adm-badge adm-badge-<?= in_array($order['status'], ['pending','confirmed','preparing','out_for_delivery','delivered','cancelled'], true) ? $order['status'] : 'pending' ?>"><?= sanitize(str_replace('_', ' ', $order['status'])) ?></span></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

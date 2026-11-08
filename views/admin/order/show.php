@@ -21,8 +21,8 @@ $paymentMethods = ['cod' => 'Cash on Delivery', 'bank_transfer' => 'Bank Transfe
         </div>
     </div>
     <div class="adm-d-flex adm-gap-8">
-        <span class="adm-badge adm-badge-<?= $order['status'] ?>" style="font-size:13px;padding:5px 14px;"><?= str_replace('_', ' ', strtoupper($order['status'])) ?></span>
-        <span class="adm-badge adm-badge-<?= $order['payment_status'] ?>" style="font-size:13px;padding:5px 14px;"><?= strtoupper($order['payment_status']) ?></span>
+        <span class="adm-badge adm-badge-<?= in_array($order['status'], $orderStatuses, true) ? $order['status'] : 'pending' ?>" style="font-size:13px;padding:5px 14px;"><?= sanitize(str_replace('_', ' ', strtoupper($order['status']))) ?></span>
+        <span class="adm-badge adm-badge-<?= in_array($order['payment_status'], $paymentStatuses, true) ? $order['payment_status'] : 'pending' ?>" style="font-size:13px;padding:5px 14px;"><?= sanitize(strtoupper($order['payment_status'])) ?></span>
     </div>
 </div>
 

@@ -11,7 +11,7 @@
     <div class="hero-content" style="position: relative; z-index: 1;">
         <p class="subtitle">100% Organic Teff &bull; Baked Fresh Daily</p>
         <h1>
-            Fresh Teff Injera,
+            Fresh Teff Injera
             <em>Delivered Daily</em>
         </h1>
         <p class="subtitle-am">100% ከጤፍ ብቻ የተዘጋጀ እንጀራ</p>

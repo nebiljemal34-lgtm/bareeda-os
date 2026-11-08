@@ -139,8 +139,20 @@ class PaymentGateway
 
     public function handleCallback(string $provider, string $rawBody, string $signature): array
     {
-        if (PAYMENT_WEBHOOK_SECRET === '') {
+        // BLOCKER 1 FIX: Fail closed if webhook secret is unset or placeholder
+        if (PAYMENT_WEBHOOK_IS_PLACEHOLDER) {
             return ['success' => false, 'code' => 503, 'message' => 'Payment callbacks are not configured.'];
+        }
+
+        // G-06 FIX: Validate Content-Type
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+        if (stripos($contentType, 'application/json') === false) {
+            return ['success' => false, 'code' => 415, 'message' => 'Content-Type must be application/json.'];
+        }
+
+        // G-06 FIX: Body size cap (64 KB)
+        if (strlen($rawBody) > 65536) {
+            return ['success' => false, 'code' => 413, 'message' => 'Payload too large.'];
         }
 
         $expected = hash_hmac('sha256', $rawBody, PAYMENT_WEBHOOK_SECRET);

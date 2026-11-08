@@ -1,0 +1,16 @@
+# SEC-03 FIX: Block all script execution in uploads directory
+<FilesMatch "\.(php|php3|php4|php5|php7|php8|phtml|phar|pl|py|cgi|asp|aspx|jsp)$">
+    Require all denied
+    Deny from all
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes
+
+# Force correct content type for images
+<FilesMatch "\.(jpe?g|png|gif|webp|svg)$">
+    Header set Content-Type "image/%{extension}e"
+</FilesMatch>
+
+# Disable PHP engine
+php_flag engine off

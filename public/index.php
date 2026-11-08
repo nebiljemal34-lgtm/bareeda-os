@@ -17,9 +17,16 @@
 
 // ─── 1. Bootstrap ───────────────────────────────────────────
 
+// G-07 FIX: Gate PHP version
+if (version_compare(PHP_VERSION, '7.4', '<')) {
+    http_response_code(500);
+    header('Content-Type: text/plain');
+    exit('PHP 7.4+ required. Current: ' . PHP_VERSION);
+}
+
 // Define application environment (set 'production' in cPanel)
 if (!defined('APP_ENV')) {
-    define('APP_ENV', getenv('APP_ENV') ?: 'development');
+    define('APP_ENV', getenv('APP_ENV') ?: 'production');
 }
 
 // Ensure we're in the right directory
@@ -28,6 +35,21 @@ chdir(dirname(__DIR__));
 // ─── 2. Load Configuration ─────────────────────────────────
 
 require_once __DIR__ . '/../config/config.php';
+
+// CPANEL-01 FIX: Refuse to run with default/placeholder DB credentials in production
+if (APP_ENV === 'production') {
+    if (DB_PASS === 'CHANGE_ME_IN_PRODUCTION' || DB_USER === 'bareeda_user' || DB_NAME === 'bareeda_injera') {
+        http_response_code(503);
+        header('Content-Type: text/plain');
+        exit('Service temporarily unavailable — database not configured.');
+    }
+    // BLOCKER 1 FIX: Also require PAYMENT_WEBHOOK_SECRET in production
+    if (PAYMENT_WEBHOOK_IS_PLACEHOLDER) {
+        http_response_code(503);
+        header('Content-Type: text/plain');
+        exit('Service temporarily unavailable — payment webhook not configured.');
+    }
+}
 
 // Ensure log directory exists
 if (!is_dir(LOG_PATH)) {

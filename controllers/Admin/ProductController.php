@@ -246,9 +246,17 @@ class AdminProductController extends AdminBaseController
             return null;
         }
 
-        // Generate unique filename
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $filename  = 'product_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        // SEC-01 FIX: Derive extension from MIME type, not user filename
+        $mimeToExt = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            'image/gif'  => 'gif',
+        ];
+        $extension = $mimeToExt[$mimeType] ?? 'bin';
+
+        // Generate unique filename with cryptographically secure random bytes
+        $filename  = 'product_' . bin2hex(random_bytes(16)) . '.' . $extension;
 
         // Ensure upload directory exists
         $uploadDir = UPLOAD_PATH . 'products/';

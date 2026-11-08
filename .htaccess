@@ -16,7 +16,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)/$ /$1 [L,R=301]
 
 # ─── Block access to sensitive directories ──────────────────
-RewriteRule ^(config|classes|models|helpers|database|logs)/ - [F,L]
+RewriteRule ^(config|classes|models|helpers|database|logs|storage|bin)/ - [F,L]
 
 # ─── Block access to hidden files (.env, .git, etc.) ───────
 RewriteCond %{SCRIPT_FILENAME} -d
@@ -74,7 +74,19 @@ Options -Indexes
 ServerSignature Off
 
 # ─── PHP Settings (if allowed by host) ─────────────────────
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_value error_log logs/php_errors.log
+    php_flag expose_php Off
+</IfModule>
 <IfModule mod_php7.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_value error_log logs/php_errors.log
+    php_flag expose_php Off
+</IfModule>
+<IfModule mod_php8.c>
     php_flag display_errors Off
     php_flag log_errors On
     php_value error_log logs/php_errors.log
