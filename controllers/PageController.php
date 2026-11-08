@@ -52,6 +52,13 @@ class PageController extends BaseController
         // Log the contact message
         app_log("Contact form: {$name} ({$email}) - {$subject}: {$message}");
 
+        TelegramNotifier::notify('contact_message', [
+            'name'    => $name,
+            'email'   => $email,
+            'subject' => $subject,
+            'message' => $message,
+        ]);
+
         flash('success', 'Thank you for your message! We will get back to you soon.');
         redirect('/contact');
     }

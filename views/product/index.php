@@ -8,7 +8,7 @@
 
 <!-- ═══ Page Header ═══ -->
 <section class="page-header">
-    <h1><?= htmlspecialchars($page_title) ?> &middot; እኛ ምርቶች</h1>
+    <h1><?= htmlspecialchars($page_title) ?></h1>
     <?php if ($search_query): ?>
         <p class="amharic-subtitle"><?= $total_items ?> result<?= $total_items !== 1 ? 's' : '' ?> for "<?= htmlspecialchars($search_query) ?>"</p>
     <?php else: ?>
@@ -74,7 +74,7 @@
     <div>
         <?php if (empty($products)): ?>
             <div class="empty-state">
-                <div class="empty-state-icon">&#128269;</div>
+                <div class="empty-state-icon" style="color: var(--gold);"><?= icon('search', 64) ?></div>
                 <h2>No Products Found</h2>
                 <p>Try adjusting your search or browse our categories.</p>
                 <a href="/products" class="btn btn-primary mt-2">View All Products</a>
@@ -88,9 +88,9 @@
                              alt="<?= htmlspecialchars($product['name']) ?>"
                              class="product-card-img" loading="lazy"
                              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                        <div class="product-card-img-placeholder" style="display:none;">&#127838;</div>
+                        <div class="product-card-img-placeholder" style="display:none;"><?= icon('bag', 48) ?></div>
                     <?php else: ?>
-                        <div class="product-card-img-placeholder">&#127838;</div>
+                        <div class="product-card-img-placeholder"><?= icon('bag', 48) ?></div>
                     <?php endif; ?>
 
                     <div class="product-card-body">
@@ -101,6 +101,7 @@
                             <?php endif; ?>
                         </a>
 
+                        <?= productPackMeta($product) ?>
                         <div class="product-card-price"><?= formatPrice((float) $product['price']) ?></div>
 
                         <?php if (!empty($product['weight_kg'])): ?>

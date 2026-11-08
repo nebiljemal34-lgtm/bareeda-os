@@ -13,7 +13,7 @@ class AdminCouponController extends BaseController
         $db   = Database::getInstance();
         $cart = $GLOBALS['cart'];
 
-        $coupons = $db->query("SELECT * FROM coupons ORDER BY created_at DESC");
+        $coupons = $db->query("SELECT * FROM coupons ORDER BY id DESC");
 
         $this->render('admin/coupons/index', [
             'page_title' => 'Manage Coupons',

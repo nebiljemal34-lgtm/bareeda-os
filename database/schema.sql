@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS `products` (
     `description_am` TEXT DEFAULT NULL,
     `price` DECIMAL(10,2) NOT NULL,
     `weight_kg` DECIMAL(8,3) DEFAULT NULL,
+    `pieces` INT UNSIGNED NOT NULL DEFAULT 1,
     `image_url` VARCHAR(500) DEFAULT NULL,
     `stock_quantity` INT NOT NULL DEFAULT 0,
     `is_active` TINYINT(1) NOT NULL DEFAULT 1,
@@ -77,14 +78,17 @@ CREATE TABLE IF NOT EXISTS `product_categories` (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `orders` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `user_id` INT UNSIGNED NOT NULL,
+    `user_id` INT UNSIGNED DEFAULT NULL,
+    `guest_name` VARCHAR(150) DEFAULT NULL,
+    `guest_phone` VARCHAR(30) DEFAULT NULL,
+    `guest_email` VARCHAR(190) DEFAULT NULL,
     `order_number` VARCHAR(30) NOT NULL,
     `subtotal` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `delivery_fee` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `discount_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `total` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `status` ENUM('pending','confirmed','preparing','out_for_delivery','delivered','cancelled') NOT NULL DEFAULT 'pending',
-    `payment_method` ENUM('cod','bank_transfer','mobile_money') NOT NULL DEFAULT 'cod',
+    `payment_method` ENUM('cod','bank_transfer','mobile_money','ebirr') NOT NULL DEFAULT 'cod',
     `payment_status` ENUM('pending','paid','refunded') NOT NULL DEFAULT 'pending',
     `delivery_address` TEXT NOT NULL,
     `delivery_notes` TEXT DEFAULT NULL,
@@ -113,6 +117,48 @@ CREATE TABLE IF NOT EXISTS `order_items` (
     KEY `idx_oi_product` (`product_id`),
     CONSTRAINT `fk_oi_order` FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_oi_product` FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Payment Transactions
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `payment_transactions` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `public_id` CHAR(36) NOT NULL,
+    `order_id` INT UNSIGNED NOT NULL,
+    `provider` VARCHAR(40) NOT NULL,
+    `channel` ENUM('bank','wallet') NOT NULL,
+    `mode` ENUM('simulation','sandbox','live') NOT NULL DEFAULT 'simulation',
+    `status` ENUM('pending','paid','failed','expired') NOT NULL DEFAULT 'pending',
+    `amount` DECIMAL(10,2) NOT NULL,
+    `currency` CHAR(3) NOT NULL DEFAULT 'ETB',
+    `provider_reference` VARCHAR(120) DEFAULT NULL,
+    `failure_reason` VARCHAR(255) DEFAULT NULL,
+    `verified_at` DATETIME DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_payment_public_id` (`public_id`),
+    UNIQUE KEY `uq_payment_provider_reference` (`provider`, `provider_reference`),
+    KEY `idx_payment_order_status` (`order_id`, `status`),
+    CONSTRAINT `fk_payment_order` FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `payment_events` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `event_id` VARCHAR(120) NOT NULL,
+    `transaction_id` BIGINT UNSIGNED DEFAULT NULL,
+    `provider` VARCHAR(40) NOT NULL,
+    `event_type` VARCHAR(40) NOT NULL,
+    `payload_hash` CHAR(64) NOT NULL,
+    `payload` LONGTEXT NOT NULL,
+    `signature_valid` TINYINT(1) NOT NULL DEFAULT 0,
+    `processing_result` VARCHAR(80) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_payment_event_id` (`event_id`),
+    KEY `idx_payment_event_transaction` (`transaction_id`),
+    CONSTRAINT `fk_payment_event_transaction` FOREIGN KEY (`transaction_id`) REFERENCES `payment_transactions`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -210,6 +256,59 @@ CREATE TABLE IF NOT EXISTS `delivery_zones` (
     KEY `idx_dz_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- Website Settings and Order Audit Trail
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `site_settings` (
+    `setting_key` VARCHAR(80) NOT NULL,
+    `setting_value` LONGTEXT DEFAULT NULL,
+    `updated_by` INT UNSIGNED DEFAULT NULL,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`setting_key`),
+    CONSTRAINT `fk_settings_user` FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `order_events` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `order_id` INT UNSIGNED NOT NULL,
+    `actor_user_id` INT UNSIGNED DEFAULT NULL,
+    `event_type` VARCHAR(40) NOT NULL,
+    `from_status` VARCHAR(40) DEFAULT NULL,
+    `to_status` VARCHAR(40) DEFAULT NULL,
+    `note` VARCHAR(255) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_order_events_order` (`order_id`, `created_at`),
+    CONSTRAINT `fk_order_events_order` FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_order_events_user` FOREIGN KEY (`actor_user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `analytics_events` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `event_type` ENUM('page_view','qr_scan') NOT NULL,
+    `visitor_token` CHAR(32) NOT NULL,
+    `path` VARCHAR(255) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_analytics_type_date` (`event_type`, `created_at`),
+    KEY `idx_analytics_visitor_date` (`visitor_token`, `created_at`),
+    KEY `idx_analytics_date` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `telegram_outbox` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `event_type` VARCHAR(40) NOT NULL,
+    `message` TEXT NOT NULL,
+    `status` ENUM('simulated','pending','sent','failed') NOT NULL DEFAULT 'simulated',
+    `attempts` INT UNSIGNED NOT NULL DEFAULT 0,
+    `last_error` VARCHAR(255) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `sent_at` DATETIME DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_telegram_status` (`status`, `created_at`),
+    KEY `idx_telegram_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============================================================
 -- SAMPLE DATA
 -- ============================================================
@@ -224,10 +323,10 @@ INSERT INTO `categories` (`name`, `name_am`, `sort_order`) VALUES
 ('Beverages', 'መጠጦች', 2);
 
 -- Products
-INSERT INTO `products` (`name`, `name_am`, `description`, `description_am`, `price`, `weight_kg`, `image_url`, `stock_quantity`, `is_active`) VALUES
-('Bareeda Super', 'ባሪዳ ሱፐር', 'Our premium single-serve injera. Perfect for individual meals. Light, spongy, and freshly baked from 100% teff flour.', 'ፕሪሚየም ነጠላ አገልግሎት እንጀራ። ለግለሰብ ምግቦች ተስማሚ። ቀላል፣ ስፖንጅ እና ከ100% የጤፍ ዱቄት ትኩስ የተጋገረ።', 80.00, 0.500, '/assets/images/products/bareeda-super.jpg', 200, 1),
-('Bareeda Family', 'ባሪዳ ፋሚሊ', 'Our best-selling family size injera. Feeds 4-6 people. Perfect for family meals and gatherings.', 'በጣም የሚሸጥ የቤተሰብ መጠን እንጀራ። 4-6 ሰዎችን ያክብራል። ለቤተሰብ ምግቦች እና ስብሰባዎች ተስማሚ።', 200.00, 1.500, '/assets/images/products/bareeda-family.jpg', 150, 1),
-('Bareeda Horca', 'ባሪዳ ሆርቃ', 'Our large party-size injera. Feeds 8-12 people. Ideal for celebrations, events, and large gatherings.', 'ትልቅ የድግስ መጠን እንጀራ። 8-12 ሰዎችን ያክብራል። ለበዓላት፣ ዝግጅቶች እና ትላልቅ ስብሰባዎች ተስማሚ።', 380.00, 3.000, '/assets/images/products/bareeda-horca.jpg', 80, 1);
+INSERT INTO `products` (`name`, `name_am`, `description`, `description_am`, `price`, `weight_kg`, `pieces`, `image_url`, `stock_quantity`, `is_active`) VALUES
+('Bareeda Super', 'በሬዳ ሱፐር', 'Pack of 4 injera at 42 ETB each. Our premium single-serve injera. Perfect for individual meals. Light, spongy, and freshly baked from 100% teff flour.', 'የ4 እንጀራ ጥቅል፣ እያንዳንዱ 42 ብር። ፕሪሚየም ነጠላ አገልግሎት እንጀራ። ለግለሰብ ምግቦች ተስማሚ። ቀላል፣ ስፖንጅ እና ከ100% የጤፍ ዱቄት ትኩስ የተጋገረ።', 168.00, 0.500, 4, '/assets/images/bareeda-label-sticker.png', 200, 1),
+('Bareeda Family', 'በሬዳ ፋሚሊ', 'Pack of 12 injera at 42 ETB each. Our best-selling family size injera. Feeds 4-6 people. Perfect for family meals and gatherings.', 'የ12 እንጀራ ጥቅል፣ እያንዳንዱ 42 ብር። በጣም የሚሸጥ የቤተሰብ መጠን እንጀራ። 4-6 ሰዎችን ያክብራል። ለቤተሰብ ምግቦች እና ስብሰባዎች ተስማሚ።', 504.00, 1.500, 12, '/assets/images/bareeda-label-sticker.png', 150, 1),
+('Bareeda Horca', 'በሬዳ ሆርቃ', 'Pack of 50 injera at 42 ETB each. Our large party-size injera. Feeds 8-12 people. Ideal for celebrations, events, and large gatherings.', 'የ50 እንጀራ ጥቅል፣ እያንዳንዱ 42 ብር። ትልቅ የድግስ መጠን እንጀራ። 8-12 ሰዎችን ያክብራል። ለበዓላት፣ ዝግጅቶች እና ትላልቅ ስብሰባዎች ተስማሚ።', 2100.00, 3.000, 50, '/assets/images/bareeda-label-sticker.png', 80, 1);
 
 -- Product ↔ Category mapping
 INSERT INTO `product_categories` (`product_id`, `category_id`) VALUES
@@ -246,6 +345,29 @@ INSERT INTO `delivery_zones` (`zone_name`, `fee`, `is_active`) VALUES
 -- Sample Coupon
 INSERT INTO `coupons` (`code`, `discount_type`, `discount_value`, `min_order_amount`, `max_uses`, `is_active`, `expires_at`) VALUES
 ('WELCOME10', 'percentage', 10.00, 100.00, 100, 1, '2027-12-31 23:59:59');
+
+INSERT INTO `site_settings` (`setting_key`, `setting_value`) VALUES
+('site_name', 'Bareeda Injera'),
+('contact_email', 'info@bareeda-injera.com'),
+('contact_phone', '+251940434748'),
+('business_city', 'Dire Dawa'),
+('business_address', 'Dire Dawa, Ethiopia'),
+('default_delivery_fee', '50'),
+('free_delivery_threshold', '500'),
+('free_delivery_min_pieces', '50'),
+('min_order_amount', '100'),
+('accepting_orders', '1'),
+('announcement', ''),
+('telegram_url', 'https://t.me/bareedainjera'),
+('facebook_url', 'https://www.facebook.com/bareedainjera'),
+('instagram_url', 'https://www.instagram.com/bareedainjera'),
+('telegram_bot_token', ''),
+('telegram_chat_id', ''),
+('telegram_live_enabled', '0'),
+('telegram_events', 'new_order,new_registration,contact_message,qr_scan'),
+('telegram_digest_enabled', '1'),
+('telegram_digest_hour', '8'),
+('telegram_last_digest_date', '');
 
 SET FOREIGN_KEY_CHECKS = 1;
 

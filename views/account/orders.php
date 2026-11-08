@@ -27,7 +27,7 @@
     <div>
         <?php if (empty($orders)): ?>
             <div class="empty-state">
-                <div class="empty-state-icon">&#128230;</div>
+                <div class="empty-state-icon" style="color: var(--gold);"><?= icon('package', 64) ?></div>
                 <h2>No Orders Yet</h2>
                 <p>You haven't placed any orders. Start shopping for fresh injera!</p>
                 <a href="/products" class="btn btn-primary">Browse Products</a>

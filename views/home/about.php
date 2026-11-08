@@ -6,10 +6,10 @@
 
 <!-- ═══ About Hero ═══ -->
 <section class="about-hero">
-    <h1>Our Story &middot; ስለ እኛ</h1>
+    <h1>Our Story</h1>
     <p>
         Bareeda Injera was born from a simple belief: everyone deserves fresh, authentic teff injera made the traditional way.
-        Founded in Addis Ababa, we combine time-honored recipes with modern convenience to bring Ethiopia's staple food to your table — daily.
+        Founded in Dire Dawa, we combine time-honored recipes with modern convenience to bring Ethiopia's staple food to your table — daily.
     </p>
 </section>
 
@@ -18,10 +18,10 @@
     <div class="container">
         <div class="grid grid-2" style="gap: 48px; align-items: center;">
             <div>
-                <h2 style="color: var(--gold); margin-bottom: 16px;">Our Mission &middot; ተልዕኳችን</h2>
+                <h2 style="color: var(--gold); margin-bottom: 16px;">Our Mission</h2>
                 <p style="color: var(--text-muted); line-height: 1.8; margin-bottom: 20px;">
                     To preserve and share the art of traditional Ethiopian injera making while making it accessible
-                    to every household in Addis Ababa. We source the finest teff from Ethiopian farmers,
+                    to every household in Dire Dawa. We source the finest teff from Ethiopian farmers,
                     support local agriculture, and deliver freshness you can taste.
                 </p>
                 <p style="color: var(--text-muted); line-height: 1.8;">
@@ -29,8 +29,8 @@
                     (ባረዳ), where community and food come together.
                 </p>
             </div>
-            <div style="aspect-ratio: 4/3; border-radius: var(--radius); background: linear-gradient(135deg, rgba(198,183,155,0.1), rgba(198,183,155,0.03)); display: flex; align-items: center; justify-content: center; font-size: 4rem; color: var(--gold); opacity: 0.3;">
-                &#127858;
+            <div style="aspect-ratio: 4/3; border-radius: var(--radius); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);">
+                <img src="/assets/images/injera-product-hd.png" alt="Fresh Bareeda teff injera" loading="lazy" style="width: 130%; height: 100%; object-fit: cover; opacity: 0.3; margin-left: -30%;">
             </div>
         </div>
     </div>
@@ -39,20 +39,20 @@
 <!-- ═══ Values ═══ -->
 <section class="section section-light">
     <div class="container">
-        <h2 class="section-title">Our Values &middot; ዋጋዎቻችን</h2>
+        <h2 class="section-title">Our Values</h2>
         <div class="grid grid-3">
             <div class="value-card card">
-                <div class="value-icon">&#9989;</div>
+                <div class="value-icon" style="color: var(--gold);"><?= icon('check-circle', 40) ?></div>
                 <h3>Quality First</h3>
                 <p>We use only 100% organic Ethiopian teff. No shortcuts, no compromises. Every batch is tested for freshness and taste.</p>
             </div>
             <div class="value-card card">
-                <div class="value-icon">&#127964;</div>
+                <div class="value-icon" style="color: var(--gold);"><?= icon('landmark', 40) ?></div>
                 <h3>Tradition</h3>
                 <p>Our recipes have been passed down through generations. We honor the traditional method of fermenting and baking injera on a mitad.</p>
             </div>
             <div class="value-card card">
-                <div class="value-icon">&#129309;</div>
+                <div class="value-icon" style="color: var(--gold);"><?= icon('users', 40) ?></div>
                 <h3>Community</h3>
                 <p>We partner with local teff farmers and employ women in our community. When you choose Bareeda, you support Ethiopian families.</p>
             </div>
@@ -60,24 +60,27 @@
     </div>
 </section>
 
-<!-- ═══ Factory / Team ═══ -->
+<!-- ═══ Our Craft ═══ -->
 <section class="section">
     <div class="container">
-        <h2 class="section-title">Our Kitchen &middot; ምግብ ቤታችን</h2>
+        <h2 class="section-title">Our Craft</h2>
         <div class="grid grid-3">
-            <div style="aspect-ratio: 1; border-radius: var(--radius); background: linear-gradient(135deg, rgba(198,183,155,0.08), rgba(198,183,155,0.02)); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--gold); opacity: 0.3;">
-                &#127859;
+            <div class="value-card card">
+                <div class="value-icon" style="color: var(--gold);"><?= icon('leaf', 40) ?></div>
+                <h3>Pure Ingredients</h3>
+                <p>Carefully selected Ethiopian teff gives every injera its characteristic flavor, texture, and nutrition.</p>
             </div>
-            <div style="aspect-ratio: 1; border-radius: var(--radius); background: linear-gradient(135deg, rgba(198,183,155,0.08), rgba(198,183,155,0.02)); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--gold); opacity: 0.3;">
-                &#128104;&#8205;&#127859;
+            <div class="value-card card">
+                <div class="value-icon" style="color: var(--gold);"><?= icon('flame', 40) ?></div>
+                <h3>Traditional Baking</h3>
+                <p>Our Dire Dawa kitchen combines traditional fermentation and baking methods with hygienic, efficient production.</p>
             </div>
-            <div style="aspect-ratio: 1; border-radius: var(--radius); background: linear-gradient(135deg, rgba(198,183,155,0.08), rgba(198,183,155,0.02)); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--gold); opacity: 0.3;">
-                &#127780;
+            <div class="value-card card">
+                <div class="value-icon" style="color: var(--gold);"><?= icon('truck', 40) ?></div>
+                <h3>Delivered Fresh</h3>
+                <p>Freshly baked injera is prepared for local delivery so it reaches your table ready to share and enjoy.</p>
             </div>
         </div>
-        <p class="text-center text-muted mt-3" style="max-width: 600px; margin-left: auto; margin-right: auto;">
-            Our modern kitchen in Addis Ababa combines traditional methods with hygienic, efficient production to serve hundreds of families daily.
-        </p>
     </div>
 </section>
 

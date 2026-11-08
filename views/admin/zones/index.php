@@ -19,7 +19,7 @@
             <?= csrf_field() ?>
             <div class="form-group" style="flex: 2; min-width: 200px; margin-bottom: 0;">
                 <label class="form-label">Zone Name *</label>
-                <input type="text" name="zone_name" class="form-input" required placeholder="e.g. Addis Ababa - Bole">
+                <input type="text" name="zone_name" class="form-input" required placeholder="e.g. Dire Dawa - Kezira">
             </div>
             <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
                 <label class="form-label">Fee (ETB) *</label>

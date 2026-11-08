@@ -15,7 +15,7 @@
 
     <?php if (empty($users)): ?>
         <div class="empty-state">
-            <div class="empty-state-icon">&#128101;</div>
+            <div class="empty-state-icon" style="color: var(--gold);"><?= icon('users', 56) ?></div>
             <h2>No Users</h2>
         </div>
     <?php else: ?>

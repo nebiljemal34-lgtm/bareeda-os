@@ -27,7 +27,7 @@
 
     <?php if (empty($orders)): ?>
         <div class="empty-state">
-            <div class="empty-state-icon">&#128230;</div>
+            <div class="empty-state-icon" style="color: var(--gold);"><?= icon('package', 56) ?></div>
             <h2>No Orders Found</h2>
         </div>
     <?php else: ?>

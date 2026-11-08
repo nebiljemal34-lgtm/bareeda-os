@@ -6,7 +6,7 @@
  * Each admin view sets $pageTitle and includes its content via $contentView.
  */
 
-$_adminUser = Auth::user();
+$_adminUser = $GLOBALS['auth']->user();
 $_currentPath = current_path();
 $_flashSuccess = flash('success');
 $_flashError   = flash('error');
@@ -740,7 +740,32 @@ function _nav_active(string $prefix, string $current): string {
             Reports
         </a>
 
-        <a href="#" class="adm-nav-item" onclick="return false;" style="opacity:0.45;cursor:default;">
+        <a href="/admin/analytics" class="adm-nav-item<?= _nav_active('/admin/analytics', $_currentPath) ?>">
+            <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-7"/></svg>
+            Analytics
+        </a>
+
+        <a href="/admin/telegram" class="adm-nav-item<?= _nav_active('/admin/telegram', $_currentPath) ?>">
+            <svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            Telegram Alerts
+        </a>
+
+        <a href="/admin/categories" class="adm-nav-item<?= _nav_active('/admin/categories', $_currentPath) ?>">
+            <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+            Categories
+        </a>
+
+        <a href="/admin/coupons" class="adm-nav-item<?= _nav_active('/admin/coupons', $_currentPath) ?>">
+            <svg viewBox="0 0 24 24"><path d="M20 12a2 2 0 0 0 0-4V5H4v3a2 2 0 0 0 0 4v3a2 2 0 0 0 0 4v3h16v-3a2 2 0 0 0 0-4v-3Z"/><path d="M12 5v14"/></svg>
+            Coupons
+        </a>
+
+        <a href="/admin/delivery-zones" class="adm-nav-item<?= _nav_active('/admin/delivery-zones', $_currentPath) ?>">
+            <svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            Delivery Zones
+        </a>
+
+        <a href="/admin/settings" class="adm-nav-item<?= _nav_active('/admin/settings', $_currentPath) ?>">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
             Settings
         </a>
@@ -788,7 +813,7 @@ function _nav_active(string $prefix, string $current): string {
 
 <!-- ── Footer ───────────────────────────────────────────── -->
 <footer class="adm-footer">
-    &copy; <?= date('Y') ?> Bareeda Injera. All rights reserved. &nbsp;|&nbsp; v<?= APP_VERSION ?>
+    &copy; <?= date('Y') ?> Bareeda Injera and Foods PLC. All rights reserved. &nbsp;|&nbsp; v<?= APP_VERSION ?>
 </footer>
 
 </body>

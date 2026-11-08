@@ -76,6 +76,15 @@ $formAction = $isEdit
             </div>
         </div>
 
+        <!-- Pieces per pack (drives the free-delivery threshold) -->
+        <div class="adm-form-group">
+            <label class="adm-form-label" for="pieces">Injera pieces per pack</label>
+            <input type="number" id="pieces" name="pieces" class="adm-form-input" min="1" step="1"
+                   value="<?= sanitize(old('pieces', $product['pieces'] ?? '1')) ?>"
+                   placeholder="1">
+            <span class="adm-text-muted adm-text-sm">Orders with more than the configured piece count get free delivery.</span>
+        </div>
+
         <!-- Stock & Category -->
         <div class="adm-form-row">
             <div class="adm-form-group">

@@ -66,22 +66,27 @@ class OrderController extends BaseController
      */
     public function confirmation(string $orderNumber): void
     {
-        $this->requireAuth();
-
         $orderModel = new Order();
         $cart       = $GLOBALS['cart'];
         $order      = $orderModel->getByOrderNumber($orderNumber);
 
-        if (!$order || (int) $order['user_id'] !== currentUserId()) {
+        $isGuestOrder = $order && $order['user_id'] === null;
+        $guestTokenOk = $order && isset($_SESSION['guest_order_tokens'][$orderNumber])
+            && (int) $_SESSION['guest_order_tokens'][$orderNumber] === (int) $order['id'];
+        $ownerOk = $order && $order['user_id'] !== null && isLoggedIn()
+            && (int) $order['user_id'] === currentUserId();
+
+        if (!$order || !($guestTokenOk || $ownerOk)) {
             flash('error', 'Order not found.');
-            redirect('/orders');
+            redirect(isLoggedIn() ? '/orders' : '/products');
             return;
         }
 
         $this->render('checkout/success', [
-            'page_title'  => 'Order Confirmed',
-            'order'       => $order,
-            'cart_count'  => 0,
+            'page_title'     => 'Order Confirmed',
+            'order'          => $order,
+            'is_guest_order' => $isGuestOrder,
+            'cart_count'     => 0,
         ]);
     }
 }

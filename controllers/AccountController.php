@@ -17,7 +17,7 @@ class AccountController extends BaseController
         $this->requireAuth();
 
         $cart       = $GLOBALS['cart'];
-        $user       = Auth::user();
+        $user       = $GLOBALS['auth']->user();
         $orderModel = new Order();
         $subModel   = new Subscription();
 
@@ -42,7 +42,7 @@ class AccountController extends BaseController
     {
         $this->requireAuth();
 
-        $user      = Auth::user();
+        $user      = $GLOBALS['auth']->user();
         $firstName = $this->input('first_name', '');
         $lastName  = $this->input('last_name', '');
         $phone     = $this->input('phone', '');
@@ -81,7 +81,7 @@ class AccountController extends BaseController
         $newPassword     = $this->rawInput('new_password', '');
         $confirmPassword = $this->rawInput('confirm_password', '');
 
-        $user = Auth::user();
+        $user = $GLOBALS['auth']->user();
         $db   = Database::getInstance();
         $full = $db->fetchOne("SELECT password_hash FROM users WHERE id = ?", [(int) $user['id']]);
 

@@ -111,6 +111,11 @@ class AuthController extends BaseController
         $result = $auth->register($email, $password, $firstName, $lastName, $phone);
 
         if ($result['success']) {
+            TelegramNotifier::notify('new_registration', [
+                'name'  => trim($firstName . ' ' . $lastName),
+                'email' => $email,
+                'phone' => $phone,
+            ]);
             flash('success', 'Account created! Please log in.');
             redirect('/login');
         } else {

@@ -74,6 +74,7 @@ class AdminProductController extends AdminBaseController
             'description_am' => $this->post('description_am', ''),
             'price'          => $this->post('price', 0),
             'weight_kg'      => $this->post('weight_kg', ''),
+            'pieces'         => $this->post('pieces', 1),
             'stock_quantity' => $this->post('stock_quantity', 0),
             'is_active'      => $this->post('is_active', 0) ? 1 : 0,
         ];
@@ -161,6 +162,7 @@ class AdminProductController extends AdminBaseController
             'description_am' => $this->post('description_am', ''),
             'price'          => $this->post('price', 0),
             'weight_kg'      => $this->post('weight_kg', ''),
+            'pieces'         => $this->post('pieces', 1),
             'stock_quantity' => $this->post('stock_quantity', 0),
             'is_active'      => $this->post('is_active', 0) ? 1 : 0,
         ];

@@ -21,7 +21,7 @@
 
     <?php if (empty($subscriptions)): ?>
         <div class="empty-state">
-            <div class="empty-state-icon">&#128197;</div>
+            <div class="empty-state-icon" style="color: var(--gold);"><?= icon('calendar', 56) ?></div>
             <h2>No Subscriptions</h2>
         </div>
     <?php else: ?>

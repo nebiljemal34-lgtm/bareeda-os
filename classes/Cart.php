@@ -177,7 +177,7 @@ class Cart
         if ($this->isLoggedIn) {
             return $this->db->query(
                 "SELECT c.id AS cart_id, c.product_id, c.quantity,
-                        p.name, p.name_am, p.price, p.image_url, p.weight_kg,
+                        p.name, p.name_am, p.price, p.image_url, p.weight_kg, p.pieces,
                         p.stock_quantity, p.is_active,
                         (p.price * c.quantity) AS line_total
                  FROM cart c
@@ -190,7 +190,7 @@ class Cart
 
         return $this->db->query(
             "SELECT cs.id AS cart_id, cs.product_id, cs.quantity,
-                    p.name, p.name_am, p.price, p.image_url, p.weight_kg,
+                    p.name, p.name_am, p.price, p.image_url, p.weight_kg, p.pieces,
                     p.stock_quantity, p.is_active,
                     (p.price * cs.quantity) AS line_total
              FROM cart_sessions cs
@@ -257,21 +257,65 @@ class Cart
     }
 
     /**
-     * Calculate delivery fee based on order subtotal and zones.
+     * Total injera pieces in the cart (quantity × pieces per pack).
+     */
+    public function getTotalPieces(): int
+    {
+        $pieces = 0;
+        foreach ($this->getItems() as $item) {
+            $pieces += (int) $item['quantity'] * max(1, (int) ($item['pieces'] ?? 1));
+        }
+        return $pieces;
+    }
+
+    /**
+     * Calculate delivery fee. Free when the cart holds strictly more than
+     * the configured minimum injera pieces; otherwise the zone/default fee.
      *
      * @return float
      */
-    public function getDeliveryFee(): float
+    public function getDeliveryFee(?int $zoneId = null): float
     {
-        $subtotal = $this->getSubtotal();
-
-        // Free delivery above threshold
-        if (defined('FREE_DELIVERY_THRESHOLD') && $subtotal >= FREE_DELIVERY_THRESHOLD) {
+        if ($this->getTotalPieces() > freeDeliveryMinPieces()) {
             return 0.0;
         }
 
-        // Default fee
-        return defined('DEFAULT_DELIVERY_FEE') ? (float) DEFAULT_DELIVERY_FEE : 50.0;
+        if ($zoneId !== null && $zoneId > 0) {
+            $zone = $this->db->fetchOne("SELECT fee FROM delivery_zones WHERE id = ? AND is_active = 1", [$zoneId]);
+            if ($zone) {
+                return (float) $zone['fee'];
+            }
+        }
+
+        return (float) setting('default_delivery_fee', (string) DEFAULT_DELIVERY_FEE);
+    }
+
+    public function getDiscount(): float
+    {
+        $code = $this->getAppliedCouponCode();
+        if ($code === '') {
+            return 0.0;
+        }
+
+        $coupon = $this->db->fetchOne(
+            "SELECT * FROM coupons WHERE code = ? AND is_active = 1 AND (expires_at IS NULL OR expires_at > NOW())",
+            [$code]
+        );
+        $subtotal = $this->getSubtotal();
+        if (!$coupon || $subtotal < (float) $coupon['min_order_amount']
+            || ((int) $coupon['max_uses'] > 0 && (int) $coupon['used_count'] >= (int) $coupon['max_uses'])) {
+            return 0.0;
+        }
+
+        $discount = $coupon['discount_type'] === 'percentage'
+            ? $subtotal * ((float) $coupon['discount_value'] / 100)
+            : (float) $coupon['discount_value'];
+        return round(min($discount, $subtotal), 2);
+    }
+
+    public function getAppliedCouponCode(): string
+    {
+        return strtoupper(trim((string) ($_SESSION['applied_coupon']['code'] ?? '')));
     }
 
     /**
@@ -280,10 +324,10 @@ class Cart
      * @param  float $discount
      * @return float
      */
-    public function getTotal(float $discount = 0.0): float
+    public function getTotal(float $discount = 0.0, ?int $zoneId = null): float
     {
         $subtotal      = $this->getSubtotal();
-        $deliveryFee   = $this->getDeliveryFee();
+        $deliveryFee   = $this->getDeliveryFee($zoneId);
         $total         = $subtotal + $deliveryFee - $discount;
         return round(max($total, 0), 2);
     }

@@ -23,9 +23,9 @@
                  alt="<?= htmlspecialchars($product['name']) ?>"
                  class="product-detail-img"
                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-            <div class="product-detail-img-placeholder" style="display:none;">&#127838;</div>
+            <div class="product-detail-img-placeholder" style="display:none;"><?= icon('bag', 56) ?></div>
         <?php else: ?>
-            <div class="product-detail-img-placeholder">&#127838;</div>
+            <div class="product-detail-img-placeholder"><?= icon('bag', 56) ?></div>
         <?php endif; ?>
     </div>
 
@@ -36,6 +36,8 @@
         <?php endif; ?>
 
         <div class="price"><?= formatPrice((float) $product['price']) ?></div>
+
+        <?= productPackMeta($product, true) ?>
 
         <?php if (!empty($product['weight_kg'])): ?>
             <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
@@ -110,14 +112,14 @@
         <!-- Delivery Info -->
         <div style="margin-top: 32px; padding: 20px; border-radius: 10px; background: rgba(198,183,155,0.04); border: 1px solid rgba(198,183,155,0.08);">
             <div style="display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px;">
-                <span style="font-size: 1.2rem;">&#128666;</span>
+                <span style="color: var(--gold);"><?= icon('truck', 22) ?></span>
                 <div>
                     <strong style="color: var(--text); font-size: 0.9rem;">Same-Day Delivery</strong>
-                    <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2px;">Order before noon for evening delivery across Addis Ababa</p>
+                    <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2px;">Order before noon for evening delivery across Dire Dawa</p>
                 </div>
             </div>
             <div style="display: flex; gap: 12px; align-items: flex-start;">
-                <span style="font-size: 1.2rem;">&#9989;</span>
+                <span style="color: var(--gold);"><?= icon('check-circle', 22) ?></span>
                 <div>
                     <strong style="color: var(--text); font-size: 0.9rem;">Freshness Guaranteed</strong>
                     <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2px;">Baked fresh every morning. 100% pure teff.</p>
@@ -140,14 +142,15 @@
                          alt="<?= htmlspecialchars($rel['name']) ?>"
                          class="product-card-img" loading="lazy"
                          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                    <div class="product-card-img-placeholder" style="display:none;">&#127838;</div>
+                    <div class="product-card-img-placeholder" style="display:none;"><?= icon('bag', 56) ?></div>
                 <?php else: ?>
-                    <div class="product-card-img-placeholder">&#127838;</div>
+                    <div class="product-card-img-placeholder"><?= icon('bag', 56) ?></div>
                 <?php endif; ?>
                 <div class="product-card-body">
                     <a href="/products/<?= (int) $rel['id'] ?>" style="text-decoration: none;">
                         <div class="product-card-name"><?= htmlspecialchars($rel['name']) ?></div>
                     </a>
+                    <?= productPackMeta($rel) ?>
                     <div class="product-card-price"><?= formatPrice((float) $rel['price']) ?></div>
                     <div class="product-card-actions">
                         <a href="/products/<?= (int) $rel['id'] ?>" class="btn btn-secondary">View</a>

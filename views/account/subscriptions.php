@@ -63,7 +63,7 @@ $frequencyLabels = [
         <!-- Active Subscriptions -->
         <?php if (empty($subscriptions)): ?>
             <div class="empty-state" style="padding: 40px;">
-                <div class="empty-state-icon">&#128197;</div>
+                <div class="empty-state-icon" style="color: var(--gold);"><?= icon('calendar', 64) ?></div>
                 <h2>No Subscriptions</h2>
                 <p>Create a subscription above to get fresh injera delivered automatically.</p>
             </div>
@@ -76,7 +76,7 @@ $frequencyLabels = [
                     <?php if (!empty($sub['product_image'])): ?>
                         <img src="<?= htmlspecialchars($sub['product_image']) ?>" alt="" style="width: 56px; height: 56px; border-radius: 8px; object-fit: cover;">
                     <?php else: ?>
-                        <div style="width: 56px; height: 56px; border-radius: 8px; background: rgba(198,183,155,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--gold); opacity: 0.3;">&#127838;</div>
+                        <div style="width: 56px; height: 56px; border-radius: 8px; background: rgba(198,183,155,0.05); display: flex; align-items: center; justify-content: center; color: var(--gold); opacity: 0.5;"><?= icon('bag', 28) ?></div>
                     <?php endif; ?>
 
                     <div>

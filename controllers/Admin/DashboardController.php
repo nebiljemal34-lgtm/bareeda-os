@@ -30,12 +30,14 @@ class AdminDashboardController extends AdminBaseController
 
         // Low stock products (threshold: 10)
         $lowStockProducts = $productModel->getLowStock(10);
+        $analytics = Analytics::summary(30);
 
         $this->render('admin/dashboard/index', [
             'pageTitle'           => 'Dashboard',
             'stats'               => $stats,
             'totalOrders'         => $totalOrders,
             'activeSubscriptions' => $activeSubscriptions,
+            'analytics'           => $analytics,
             'recentOrders'        => $recentOrders,
             'lowStockProducts'    => $lowStockProducts,
         ]);

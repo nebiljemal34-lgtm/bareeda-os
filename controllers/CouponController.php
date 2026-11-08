@@ -33,6 +33,16 @@ class CouponController extends BaseController
             redirect_back();
             return;
         }
+        if ($GLOBALS['cart']->getSubtotal() < (float) $coupon['min_order_amount']) {
+            flash('error', 'This coupon requires a minimum subtotal of ' . formatPrice((float) $coupon['min_order_amount']) . '.');
+            redirect_back();
+            return;
+        }
+        if ((int) $coupon['max_uses'] > 0 && (int) $coupon['used_count'] >= (int) $coupon['max_uses']) {
+            flash('error', 'This coupon has reached its usage limit.');
+            redirect_back();
+            return;
+        }
 
         $_SESSION['applied_coupon'] = $coupon;
         flash('success', 'Coupon "' . htmlspecialchars($coupon['code']) . '" applied!');

@@ -24,8 +24,9 @@ class Database
     private function __construct()
     {
         $dsn = sprintf(
-            'mysql:host=%s;dbname=%s;charset=%s',
+            'mysql:host=%s;port=%s;dbname=%s;charset=%s',
             DB_HOST,
+            DB_PORT,
             DB_NAME,
             DB_CHARSET
         );
@@ -88,7 +89,9 @@ class Database
      */
     public function query(string $sql, array $params = []): array
     {
-        $stmt = $this->execute($sql, $params);
+        $stmt = $this->prepare($sql);
+        $stmt->execute($params);
+        $this->queryCount++;
         return $stmt->fetchAll();
     }
 
@@ -101,8 +104,10 @@ class Database
      */
     public function fetchOne(string $sql, array $params = [])
     {
-        $stmt = $this->execute($sql, $params);
-        $row  = $stmt->fetch();
+        $stmt = $this->prepare($sql);
+        $stmt->execute($params);
+        $this->queryCount++;
+        $row = $stmt->fetch();
         return $row !== false ? $row : null;
     }
 

@@ -268,6 +268,8 @@ class Router
             $shortName = end($parts);
             if (class_exists($shortName)) {
                 $className = $shortName;
+            } elseif (strpos($controllerName, 'Admin\\') === 0 && class_exists('Admin' . $shortName)) {
+                $className = 'Admin' . $shortName;
             } else {
                 $this->handle404($this->parseUri(), "Controller class not found: {$controllerName}");
                 return;

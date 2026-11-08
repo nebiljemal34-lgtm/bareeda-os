@@ -28,9 +28,13 @@ class AdminOrderController extends AdminBaseController
         $dateTo     = trim($this->get('date_to', ''));
 
         // Build query with filters
-        $sql    = "SELECT o.*, u.email, u.first_name, u.last_name, u.phone
+        $sql    = "SELECT o.*,
+                          COALESCE(u.first_name, o.guest_name, 'Guest') AS first_name,
+                          COALESCE(u.last_name, '') AS last_name,
+                          COALESCE(u.email, o.guest_email, '') AS email,
+                          COALESCE(u.phone, o.guest_phone, '') AS phone
                    FROM orders o
-                   INNER JOIN users u ON o.user_id = u.id";
+                   LEFT JOIN users u ON o.user_id = u.id";
         $where  = [];
         $params = [];
 
@@ -96,9 +100,14 @@ class AdminOrderController extends AdminBaseController
             redirect('/admin/orders');
         }
 
+        $payments = new PaymentGateway();
+
         $this->render('admin/order/show', [
             'pageTitle' => 'Order #' . $order['order_number'],
             'order'     => $order,
+            'payment_transactions' => $payments->getByOrder((int) $id),
+            'payment_providers' => PaymentGateway::providers(),
+            'order_events' => $this->orderModel->getEvents((int) $id),
         ]);
     }
 

@@ -8,18 +8,19 @@
  */
 
 // ─── Database ───────────────────────────────────────────────
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'bareeda_injera');
-define('DB_USER', 'bareeda_user');
-define('DB_PASS', 'CHANGE_ME_IN_PRODUCTION');
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_PORT', getenv('DB_PORT') ?: '3306');
+define('DB_NAME', getenv('DB_NAME') ?: 'bareeda_injera');
+define('DB_USER', getenv('DB_USER') ?: 'bareeda_user');
+define('DB_PASS', getenv('DB_PASS') ?: 'CHANGE_ME_IN_PRODUCTION');
 define('DB_CHARSET', 'utf8mb4');
 
 // ─── Application ────────────────────────────────────────────
-define('APP_NAME', 'Bareeda Injera');
-define('APP_URL', 'https://www.bareeda-injera.com');
-define('APP_EMAIL', 'info@bareeda-injera.com');
-define('APP_PHONE', '+251940434748');
-define('APP_VERSION', '1.0.0');
+define('APP_NAME', getenv('APP_NAME') ?: 'Bareeda Injera');
+define('APP_URL', rtrim(getenv('APP_URL') ?: 'https://www.bareeda-injera.com', '/'));
+define('APP_EMAIL', getenv('APP_EMAIL') ?: 'info@bareeda-injera.com');
+define('APP_PHONE', getenv('APP_PHONE') ?: '+251940434748');
+define('APP_VERSION', '1.1.0');
 
 // ─── Paths ──────────────────────────────────────────────────
 define('BASE_PATH', dirname(__DIR__) . '/');
@@ -36,17 +37,20 @@ define('LOGIN_LOCKOUT_MINUTES', 15);
 
 // Cron endpoint secret key — CHANGE THIS to a random string in production!
 // The cron URL must include ?key=<this value> to be accepted.
-define('CRON_SECRET_KEY', 'CHANGE_ME_CRON_SECRET_KEY_IN_PRODUCTION');
+define('CRON_SECRET_KEY', getenv('CRON_SECRET_KEY') ?: 'CHANGE_ME_CRON_SECRET_KEY_IN_PRODUCTION');
+define('PAYMENT_MODE', getenv('PAYMENT_MODE') ?: (defined('APP_ENV') && APP_ENV === 'production' ? 'disabled' : 'simulation'));
+define('PAYMENT_WEBHOOK_SECRET', getenv('PAYMENT_WEBHOOK_SECRET') ?: (defined('APP_ENV') && APP_ENV === 'production' ? '' : 'local-simulation-secret'));
 
 // ─── Currency / Locale ─────────────────────────────────────
-define('CURRENCY_SYMBOL', 'ETB');
+define('CURRENCY_CODE', 'ETB');
 define('CURRENCY_POSITION', 'after');       // "100 ETB"
 define('LOCALE', 'en_US');
 
 // ─── Orders & Delivery ─────────────────────────────────────
 define('DEFAULT_DELIVERY_FEE', 50);         // ETB
 define('MIN_ORDER_AMOUNT', 100);            // ETB
-define('FREE_DELIVERY_THRESHOLD', 500);     // ETB – orders above this get free delivery
+define('FREE_DELIVERY_THRESHOLD', 500);     // ETB – legacy threshold (superseded by piece count)
+define('FREE_DELIVERY_MIN_PIECES', 50);     // injera pieces – orders with MORE than this get free delivery
 
 // ─── Pagination ─────────────────────────────────────────────
 define('ITEMS_PER_PAGE', 12);
@@ -67,8 +71,12 @@ ini_set('error_log', LOG_PATH . 'php_errors.log');
 error_reporting(E_ALL);
 
 // ─── Session Configuration ──────────────────────────────────
+define('SESSION_SECURE_COOKIE', filter_var(
+    getenv('SESSION_SECURE_COOKIE') ?: (defined('APP_ENV') && APP_ENV === 'production' ? '1' : '0'),
+    FILTER_VALIDATE_BOOLEAN
+));
 ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 1);
+ini_set('session.cookie_secure', SESSION_SECURE_COOKIE ? '1' : '0');
 ini_set('session.use_strict_mode', 1);
 ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
 ini_set('session.cookie_samesite', 'Strict');

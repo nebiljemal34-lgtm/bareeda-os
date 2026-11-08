@@ -19,7 +19,7 @@
 
 // Define application environment (set 'production' in cPanel)
 if (!defined('APP_ENV')) {
-    define('APP_ENV', 'development');
+    define('APP_ENV', getenv('APP_ENV') ?: 'development');
 }
 
 // Ensure we're in the right directory
@@ -43,9 +43,13 @@ if (!is_dir(UPLOAD_PATH)) {
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/router.php';
+require_once __DIR__ . '/../classes/SiteSettings.php';
 require_once __DIR__ . '/../helpers/functions.php';
 require_once __DIR__ . '/../classes/Auth.php';
 require_once __DIR__ . '/../classes/Cart.php';
+require_once __DIR__ . '/../classes/PaymentGateway.php';
+require_once __DIR__ . '/../classes/Analytics.php';
+require_once __DIR__ . '/../classes/TelegramNotifier.php';
 require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../models/Order.php';
 require_once __DIR__ . '/../models/Subscription.php';
@@ -58,7 +62,7 @@ if (session_status() === PHP_SESSION_NONE) {
         'lifetime' => SESSION_LIFETIME,
         'path'     => '/',
         'domain'   => '',
-        'secure'   => true,
+        'secure'   => SESSION_SECURE_COOKIE,
         'httponly'  => true,
         'samesite'  => 'Strict',
     ]);
@@ -87,6 +91,9 @@ $router->get('/products', 'ProductController@index');
 $router->get('/products/{id}', 'ProductController@show');
 $router->get('/categories/{id}', 'CategoryController@show');
 $router->get('/search', 'ProductController@search');
+$router->get('/links', 'LinkController@index');
+$router->get('/links/', 'LinkController@index');
+$router->post('/analytics/qr-scan', 'AnalyticsController@qrScan');
 
 // --- Cart Routes ---
 $router->get('/cart', 'CartController@index');
@@ -105,11 +112,18 @@ $router->get('/forgot-password', 'AuthController@forgotPasswordForm');
 $router->post('/forgot-password', 'AuthController@forgotPassword', ['csrf']);
 
 // --- Checkout / Orders ---
-$router->get('/checkout', 'CheckoutController@index', ['auth']);
-$router->post('/checkout', 'CheckoutController@process', ['auth', 'csrf']);
+$router->get('/checkout', 'CheckoutController@index');
+$router->post('/checkout', 'CheckoutController@process', ['csrf']);
 $router->get('/orders', 'OrderController@index', ['auth']);
 $router->get('/orders/{id}', 'OrderController@show', ['auth']);
-$router->get('/order/confirmation/{orderNumber}', 'OrderController@confirmation', ['auth']);
+$router->get('/order/confirmation/{orderNumber}', 'OrderController@confirmation');
+
+// Payment initialization, automatic verification, and signed provider callbacks
+$router->get('/payment/{publicId}', 'PaymentController@show', ['auth']);
+$router->get('/payment/{publicId}/status', 'PaymentController@status', ['auth']);
+$router->post('/payment/{publicId}/simulate', 'PaymentController@simulate', ['auth', 'csrf']);
+$router->post('/payment/{publicId}/retry', 'PaymentController@retry', ['auth', 'csrf']);
+$router->post('/payment/callback/{provider}', 'PaymentController@callback');
 
 // --- Subscriptions ---
 $router->get('/subscriptions', 'SubscriptionController@index', ['auth']);
@@ -130,6 +144,7 @@ $router->post('/account/change-password', 'AccountController@changePassword', ['
 // --- Admin Routes ---
 $router->get('/admin', 'Admin\DashboardController@index', ['auth', 'admin']);
 $router->get('/admin/dashboard', 'Admin\DashboardController@index', ['auth', 'admin']);
+$router->get('/admin/analytics', 'Admin\AnalyticsController@index', ['auth', 'admin']);
 
 // Admin Products
 $router->get('/admin/products', 'Admin\ProductController@index', ['auth', 'admin']);
@@ -160,6 +175,15 @@ $router->post('/admin/users/{id}/role', 'Admin\UserController@updateRole', ['aut
 $router->get('/admin/reports/sales', 'Admin\ReportController@sales', ['auth', 'admin']);
 $router->get('/admin/reports/products', 'Admin\ReportController@products', ['auth', 'admin']);
 $router->get('/admin/reports/customers', 'Admin\ReportController@customers', ['auth', 'admin']);
+
+// Admin Website Settings
+$router->get('/admin/settings', 'Admin\SettingController@index', ['auth', 'admin']);
+$router->post('/admin/settings', 'Admin\SettingController@update', ['auth', 'admin', 'csrf']);
+$router->post('/admin/settings/telegram-test', 'Admin\SettingController@telegramTest', ['auth', 'admin', 'csrf']);
+
+// Admin Telegram Alerts
+$router->get('/admin/telegram', 'Admin\TelegramController@index', ['auth', 'admin']);
+$router->post('/admin/telegram/{id}/retry', 'Admin\TelegramController@retry', ['auth', 'admin', 'csrf']);
 
 // Admin Categories
 $router->get('/admin/categories', 'AdminCategoryController@index', ['auth', 'admin']);
@@ -193,7 +217,9 @@ $router->get('/terms', 'PageController@terms');
 
 // --- Cron / Webhook ---
 $router->get('/cron/process-subscriptions', 'CronController@processSubscriptions');
+$router->get('/cron/telegram', 'CronController@telegram');
 
 // ─── 7. Dispatch ────────────────────────────────────────────
 
+Analytics::trackPageView();
 $router->dispatch();

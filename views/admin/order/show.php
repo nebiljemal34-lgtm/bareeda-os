@@ -7,7 +7,7 @@
 
 $orderStatuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'];
 $paymentStatuses = ['pending', 'paid', 'refunded'];
-$paymentMethods = ['cod' => 'Cash on Delivery', 'bank_transfer' => 'Bank Transfer', 'mobile_money' => 'Mobile Money'];
+$paymentMethods = ['cod' => 'Cash on Delivery', 'bank_transfer' => 'Bank Transfer', 'mobile_money' => 'Mobile Money', 'ebirr' => 'eBirr Wallet'];
 ?>
 
 <!-- ── Page Header ──────────────────────────────────────── -->
@@ -100,6 +100,25 @@ $paymentMethods = ['cod' => 'Cash on Delivery', 'bank_transfer' => 'Bank Transfe
             </ul>
         </div>
 
+        <?php if (!empty($order_events)): ?>
+        <div class="adm-card" style="margin-top:20px;">
+            <div class="adm-card-header"><div class="adm-card-title">Order Audit Trail</div></div>
+            <?php foreach ($order_events as $event): ?>
+                <div style="padding:11px 0;border-bottom:1px solid var(--adm-border);">
+                    <div class="adm-d-flex adm-jc-between adm-gap-8">
+                        <strong><?= sanitize(ucwords(str_replace('_', ' ', $event['event_type']))) ?></strong>
+                        <span class="adm-text-muted adm-text-sm"><?= formatDateTime($event['created_at']) ?></span>
+                    </div>
+                    <div class="adm-text-sm" style="margin-top:4px;">
+                        <?php if ($event['from_status']): ?><?= sanitize($event['from_status']) ?> &rarr; <?php endif; ?><strong><?= sanitize($event['to_status'] ?? '') ?></strong>
+                        &middot; <?= sanitize(trim(($event['first_name'] ?? '') . ' ' . ($event['last_name'] ?? '')) ?: ($event['actor_user_id'] ? 'Customer' : 'System')) ?>
+                    </div>
+                    <?php if ($event['note']): ?><div class="adm-text-muted adm-text-sm" style="margin-top:3px;"><?= sanitize($event['note']) ?></div><?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
     </div>
 
     <!-- ── Right Column ─────────────────────────────────── -->
@@ -114,7 +133,11 @@ $paymentMethods = ['cod' => 'Cash on Delivery', 'bank_transfer' => 'Bank Transfe
                 <li>
                     <span class="info-label">Name</span>
                     <span class="info-value">
-                        <a href="/admin/users/<?= $order['user_id'] ?>"><?= sanitize($order['first_name'] . ' ' . $order['last_name']) ?></a>
+                        <?php if (!empty($order['user_id'])): ?>
+                        <a href="/admin/users/<?= (int) $order['user_id'] ?>"><?= sanitize(trim($order['first_name'] . ' ' . $order['last_name'])) ?></a>
+                        <?php else: ?>
+                        <?= sanitize(trim($order['first_name'] . ' ' . $order['last_name'])) ?> <span class="adm-badge adm-badge-pending" style="margin-left:6px;">Guest</span>
+                        <?php endif; ?>
                     </span>
                 </li>
                 <li>
@@ -152,6 +175,38 @@ $paymentMethods = ['cod' => 'Cash on Delivery', 'bank_transfer' => 'Bank Transfe
                 </li>
             </ul>
         </div>
+
+        <?php if (!empty($payment_transactions)): ?>
+        <div class="adm-card adm-mb-20">
+            <div class="adm-card-header">
+                <div class="adm-card-title">Payment Transactions</div>
+                <div class="adm-text-muted adm-text-sm">Automatic verification ledger</div>
+            </div>
+            <?php foreach ($payment_transactions as $transaction): ?>
+                <div style="padding:12px 0;border-bottom:1px solid var(--adm-border);">
+                    <div class="adm-d-flex adm-jc-between adm-gap-8" style="align-items:flex-start;">
+                        <div>
+                            <div class="adm-fw-600"><?= sanitize($payment_providers[$transaction['provider']]['name'] ?? $transaction['provider']) ?></div>
+                            <div class="adm-text-muted adm-text-sm"><?= sanitize($transaction['public_id']) ?></div>
+                        </div>
+                        <span class="adm-badge adm-badge-<?= sanitize($transaction['status']) ?>"><?= strtoupper(sanitize($transaction['status'])) ?></span>
+                    </div>
+                    <ul class="adm-info-list" style="margin-top:8px;">
+                        <li><span class="info-label">Amount / Mode</span><span class="info-value"><?= formatPrice((float) $transaction['amount']) ?> · <?= sanitize(ucfirst($transaction['mode'])) ?></span></li>
+                        <?php if ($transaction['provider_reference']): ?>
+                        <li><span class="info-label">Provider Ref</span><span class="info-value"><?= sanitize($transaction['provider_reference']) ?></span></li>
+                        <?php endif; ?>
+                        <?php if ($transaction['verified_at']): ?>
+                        <li><span class="info-label">Verified</span><span class="info-value"><?= formatDateTime($transaction['verified_at']) ?></span></li>
+                        <?php endif; ?>
+                        <?php if ($transaction['failure_reason']): ?>
+                        <li><span class="info-label">Failure</span><span class="info-value"><?= sanitize($transaction['failure_reason']) ?></span></li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
 
         <!-- Update Order Status -->
         <div class="adm-card adm-mb-20">

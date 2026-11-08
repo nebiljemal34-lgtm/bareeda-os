@@ -5,6 +5,88 @@
  * Global utility functions used throughout the application.
  */
 
+function setting(string $key, string $default = ''): string
+{
+    return SiteSettings::get($key, $default);
+}
+
+/**
+ * Minimum injera piece count for free delivery. Orders must exceed this
+ * (strictly more than) to qualify; exactly this many pieces still pays the fee.
+ */
+function freeDeliveryMinPieces(): int
+{
+    return max(0, (int) setting('free_delivery_min_pieces', (string) FREE_DELIVERY_MIN_PIECES));
+}
+
+/**
+ * Number of injera in one pack of a product.
+ */
+function packPieces(array $product): int
+{
+    return max(1, (int) ($product['pieces'] ?? 1));
+}
+
+/**
+ * Price of a single injera, derived from pack price ÷ pack pieces.
+ */
+function perPiecePrice(array $product): float
+{
+    return round((float) $product['price'] / packPieces($product), 2);
+}
+
+/**
+ * Customer-facing pack info: how many injera per pack and the single-injera price.
+ * $detail renders larger stat tiles for the product page; default is a compact card row.
+ */
+function productPackMeta(array $product, bool $detail = false): string
+{
+    $pieces = packPieces($product);
+    $each   = perPiecePrice($product);
+
+    if ($detail) {
+        return '<div class="pack-meta pack-meta-detail">'
+            . '<div class="pack-tile"><span class="pack-tile-value">' . $pieces . '</span> <span class="pack-tile-label">injera per pack</span></div>'
+            . '<div class="pack-tile"><span class="pack-tile-value">' . formatPrice($each) . '</span> <span class="pack-tile-label">per single injera</span></div>'
+            . '</div>';
+    }
+
+    return '<div class="pack-meta">'
+        . '<span class="pack-chip">' . icon('package', 14) . '<strong>' . $pieces . '</strong>&nbsp;injera / pack</span>'
+        . '<span class="pack-each"><strong>' . formatPrice($each) . '</strong> per injera</span>'
+        . '</div>';
+}
+
+function icon(string $name, int $size = 24): string
+{
+    $paths = [
+        'bag' => '<path d="M4 8h16l-1 12H5L4 8Z"/><path d="M8 8a4 4 0 0 1 8 0"/>',
+        'leaf' => '<path d="M20 4C12 4 5 8 5 15c0 3 2 5 5 5 7 0 10-8 10-16Z"/><path d="M4 21c3-6 7-9 13-12"/>',
+        'flame' => '<path d="M12 22c4 0 7-3 7-7 0-5-4-8-6-13-1 4-3 6-5 8-2 2-3 4-3 6 0 3 3 6 7 6Z"/><path d="M9 18c0-2 2-3 3-5 2 2 3 3 3 5a3 3 0 0 1-6 0Z"/>',
+        'truck' => '<path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
+        'check' => '<path d="m5 12 4 4L19 6"/>',
+        'check-circle' => '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+        'landmark' => '<path d="m3 10 9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 21h18"/>',
+        'users' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+        'phone' => '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z"/>',
+        'mail' => '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+        'map-pin' => '<path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+        'clock' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        'globe' => '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+        'package' => '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 8 9 5 9-5M3 8v9l9 5 9-5V8M12 13v9"/>',
+        'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+        'cart' => '<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.5 11h11l2-7H6"/>',
+        'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+        'send' => '<path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/>',
+        'facebook' => '<path d="M14 8h4V3h-4c-3 0-5 2-5 5v3H6v5h3v5h5v-5h4l1-5h-5V8Z"/>',
+        'instagram' => '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".5" fill="currentColor"/>',
+        'star' => '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" fill="currentColor"/>',
+    ];
+    $size = max(8, min(128, $size));
+    $content = $paths[$name] ?? $paths['bag'];
+    return '<svg width="' . $size . '" height="' . $size . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $content . '</svg>';
+}
+
 // ─── Sanitization ───────────────────────────────────────────
 
 /**
@@ -220,7 +302,7 @@ function store_old_input(): void
 function formatPrice(float $amount): string
 {
     $formatted = number_format($amount, 2, '.', ',');
-    $symbol    = defined('CURRENCY_SYMBOL') ? CURRENCY_SYMBOL : 'ETB';
+    $symbol    = defined('CURRENCY_CODE') ? CURRENCY_CODE : 'ETB';
     $position  = defined('CURRENCY_POSITION') ? CURRENCY_POSITION : 'after';
 
     if ($position === 'before') {

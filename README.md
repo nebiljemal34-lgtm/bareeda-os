@@ -60,7 +60,7 @@ bareeda-website/
 | Accent Font | Playfair Display (italic, for taglines) |
 | Pattern | Concentric circles (injera bubble texture) |
 | Logo | Circular "B" with injera texture + wheat stalks |
-| Amharic | ባሪዳ እንጀራ |
+| Amharic | በሬዳ እንጀራ |
 
 ---
 

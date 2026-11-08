@@ -8,7 +8,7 @@
 <section class="section">
     <div class="container" style="max-width: 640px; text-align: center;">
 
-        <div class="success-icon">&#10003;</div>
+        <div class="success-icon"><?= icon('check-circle', 44) ?></div>
 
         <h1 style="color: var(--gold); margin-bottom: 12px;">Order Confirmed!</h1>
         <p style="color: var(--text-muted); font-size: 1.05rem; margin-bottom: 8px;">
@@ -83,6 +83,7 @@
                     'cod' => 'Cash on Delivery',
                     'bank_transfer' => 'Bank Transfer',
                     'mobile_money' => 'Mobile Money (Telebirr / CBE Birr)',
+                    'ebirr' => 'eBirr Wallet',
                 ];
                 $method = $paymentLabels[$order['payment_method']] ?? $order['payment_method'];
                 ?>
@@ -92,18 +93,26 @@
 
         <!-- Delivery Expectations -->
         <div style="background: rgba(198,183,155,0.05); border-radius: 10px; padding: 24px; margin-bottom: 32px; text-align: left;">
-            <h3 style="color: var(--gold); font-size: 1rem; margin-bottom: 12px;">&#128666; What's Next?</h3>
+            <h3 style="color: var(--gold); font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><?= icon('truck', 20) ?> What's Next?</h3>
             <ul style="color: var(--text-muted); font-size: 0.9rem; line-height: 2; padding-left: 20px;">
                 <li>Your order status is currently <strong style="color: var(--warning);">Pending</strong></li>
                 <li>We'll confirm your order shortly via phone or Telegram</li>
                 <li>Delivery expected within 24 hours</li>
+                <?php if (!empty($is_guest_order)): ?>
+                <li>Save your order number <strong style="color: var(--gold);"><?= htmlspecialchars($order['order_number']) ?></strong> &mdash; call us anytime to check on your delivery</li>
+                <?php else: ?>
                 <li>You can track your order in <a href="/orders" style="color: var(--gold);">My Orders</a></li>
+                <?php endif; ?>
             </ul>
         </div>
 
         <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
             <a href="/products" class="btn btn-primary">Continue Shopping</a>
+            <?php if (!empty($is_guest_order)): ?>
+            <a href="tel:<?= sanitize(preg_replace('/[^0-9+]/', '', setting('contact_phone', APP_PHONE))) ?>" class="btn btn-secondary">Call Us About This Order</a>
+            <?php else: ?>
             <a href="/orders/<?= (int) $order['id'] ?>" class="btn btn-secondary">View Order Details</a>
+            <?php endif; ?>
         </div>
     </div>
 </section>

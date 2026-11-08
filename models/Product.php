@@ -245,6 +245,7 @@ class Product
             'description_am'  => $data['description_am'] ?? null,
             'price'           => $price,
             'weight_kg'       => isset($data['weight_kg']) ? (float) $data['weight_kg'] : null,
+            'pieces'          => isset($data['pieces']) ? max(1, (int) $data['pieces']) : 1,
             'image_url'       => $data['image_url'] ?? null,
             'stock_quantity'  => $stock,
             'is_active'       => isset($data['is_active']) ? (int) $data['is_active'] : 1,
@@ -277,12 +278,16 @@ class Product
 
         // Build update array with only provided fields
         $updateData = [];
-        $allowedFields = ['name', 'name_am', 'description', 'description_am', 'price', 'weight_kg', 'image_url', 'stock_quantity', 'is_active'];
+        $allowedFields = ['name', 'name_am', 'description', 'description_am', 'price', 'weight_kg', 'pieces', 'image_url', 'stock_quantity', 'is_active'];
 
         foreach ($allowedFields as $field) {
             if (array_key_exists($field, $data)) {
                 $updateData[$field] = $data[$field];
             }
+        }
+
+        if (isset($updateData['pieces'])) {
+            $updateData['pieces'] = max(1, (int) $updateData['pieces']);
         }
 
         // Sanitize string fields

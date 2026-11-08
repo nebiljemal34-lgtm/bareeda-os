@@ -85,14 +85,14 @@
         <!-- Quick Links -->
         <div class="grid grid-2" style="gap: 16px;">
             <a href="/subscriptions" class="card" style="text-decoration: none; display: flex; align-items: center; gap: 16px;">
-                <span style="font-size: 2rem;">&#128197;</span>
+                <span style="color: var(--gold);"><?= icon('calendar', 34) ?></span>
                 <div>
                     <h4 style="color: var(--text); font-size: 0.95rem; margin-bottom: 4px;">Manage Subscriptions</h4>
                     <p style="color: var(--text-muted); font-size: 0.82rem;">Set up recurring injera deliveries</p>
                 </div>
             </a>
             <a href="/products" class="card" style="text-decoration: none; display: flex; align-items: center; gap: 16px;">
-                <span style="font-size: 2rem;">&#128722;</span>
+                <span style="color: var(--gold);"><?= icon('cart', 34) ?></span>
                 <div>
                     <h4 style="color: var(--text); font-size: 0.95rem; margin-bottom: 4px;">Shop Products</h4>
                     <p style="color: var(--text-muted); font-size: 0.82rem;">Browse our fresh teff injera</p>
@@ -139,7 +139,7 @@
                         <label class="form-label" for="city">City</label>
                         <input type="text" id="city" name="city" class="form-input"
                                value="<?= htmlspecialchars($user['city'] ?? '') ?>"
-                               placeholder="Addis Ababa">
+                               placeholder="Dire Dawa">
                     </div>
                 </div>
 

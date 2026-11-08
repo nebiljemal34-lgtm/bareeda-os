@@ -17,13 +17,17 @@ class CartController extends BaseController
         $cart  = $GLOBALS['cart'];
         $items = $cart->getItems();
 
+        $discount = $cart->getDiscount();
+
         $this->render('cart/index', [
             'page_title'   => 'Shopping Cart',
             'items'        => $items,
             'cart_count'   => $cart->getItemCount(),
             'subtotal'     => $cart->getSubtotal(),
+            'discount'     => $discount,
+            'coupon_code'  => $cart->getAppliedCouponCode(),
             'delivery_fee' => $cart->getDeliveryFee(),
-            'total'        => $cart->getTotal(),
+            'total'        => $cart->getTotal($discount),
         ]);
     }
 

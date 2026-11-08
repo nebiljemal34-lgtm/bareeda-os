@@ -8,20 +8,26 @@
 $_pageTitle  = $page_title ?? 'Bareeda Injera';
 $_cartCount  = $cart_count ?? 0;
 $_isLoggedIn = isLoggedIn();
-$_user       = $_isLoggedIn ? Auth::user() : null;
+$_user       = $_isLoggedIn ? $GLOBALS['auth']->user() : null;
 $_isAdmin    = isAdmin();
 $_flashHtml  = display_flash_messages();
+$_siteName   = setting('site_name', APP_NAME);
+$_announcement = trim(setting('announcement'));
+$_contactPhone = setting('contact_phone', APP_PHONE);
+$_contactEmail = setting('contact_email', APP_EMAIL);
+$_businessCity = setting('business_city', 'Dire Dawa');
+$_businessAddress = setting('business_address', $_businessCity . ', Ethiopia');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($_pageTitle) ?> | <?= APP_NAME ?></title>
-    <meta name="description" content="Fresh teff injera delivered daily in Addis Ababa. 100% natural, traditionally made.">
+    <title><?= htmlspecialchars($_pageTitle) ?> | <?= sanitize($_siteName) ?></title>
+    <meta name="description" content="Fresh teff injera delivered daily in <?= sanitize($_businessCity) ?>. 100% natural, traditionally made.">
     <link rel="icon" type="image/png" href="/assets/images/logo-front.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+Ethiopic:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
     <style>
         /* ── Navigation ─────────────────────────────── */
@@ -41,10 +47,17 @@ $_flashHtml  = display_flash_messages();
             display: flex; align-items: center; gap: 12px;
             text-decoration: none; color: var(--gold);
         }
-        .navbar-brand img { height: 42px; width: auto; }
-        .navbar-brand span {
-            font-size: 1.3rem; font-weight: 800;
-            letter-spacing: 1px; text-transform: uppercase;
+        .navbar-brand img { height: 48px; width: auto; }
+        .navbar-brand-text {
+            display: flex; flex-direction: column; gap: 3px; line-height: 1.1;
+        }
+        .navbar-brand-am {
+            font-family: 'Noto Sans Ethiopic', sans-serif;
+            font-size: 1.1rem; font-weight: 700; color: var(--gold);
+        }
+        .navbar-brand-en {
+            font-size: 0.72rem; font-weight: 700; color: var(--text);
+            letter-spacing: 1.6px; text-transform: uppercase;
         }
         .navbar-links {
             display: flex; align-items: center; gap: 8px;
@@ -126,8 +139,8 @@ $_flashHtml  = display_flash_messages();
             margin-bottom: 8px;
         }
         .hero .subtitle-am {
-            font-size: 1.05rem; color: var(--gold);
-            opacity: 0.7; margin-bottom: 32px;
+            font-size: 1.15rem; color: var(--gold); font-weight: 700;
+            opacity: 1; margin-bottom: 32px;
         }
         .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 
@@ -149,7 +162,7 @@ $_flashHtml  = display_flash_messages();
             border-color: rgba(198,183,155,0.2);
         }
         .product-card-img {
-            width: 100%; aspect-ratio: 4/3;
+            width: 100%; aspect-ratio: 2/1;
             object-fit: cover; display: block;
             background: rgba(198,183,155,0.05);
         }
@@ -174,6 +187,39 @@ $_flashHtml  = display_flash_messages();
         }
         .product-card-actions { display: flex; gap: 8px; }
         .product-card-actions .btn { flex: 1; padding: 10px 16px; font-size: 0.82rem; }
+
+        /* ── Pack Size / Per-Piece Price ────────────── */
+        .pack-meta {
+            display: flex; align-items: center; gap: 10px;
+            flex-wrap: wrap; margin-bottom: 12px;
+        }
+        .pack-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.78rem; font-weight: 600; color: var(--gold);
+            background: rgba(198,183,155,0.1);
+            border: 1px solid rgba(198,183,155,0.18);
+            padding: 4px 10px; border-radius: 999px;
+            white-space: nowrap;
+        }
+        .pack-chip svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .pack-each {
+            font-size: 0.78rem; color: var(--text-muted);
+            font-weight: 600; white-space: nowrap;
+        }
+        .pack-each strong { color: var(--text); }
+        .pack-meta-detail { gap: 12px; margin: 4px 0 20px; }
+        .pack-tile {
+            flex: 1; min-width: 130px;
+            background: rgba(198,183,155,0.06);
+            border: 1px solid rgba(198,183,155,0.14);
+            border-radius: 12px; padding: 14px 16px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .pack-tile-value { font-size: 1.25rem; font-weight: 800; color: var(--gold); }
+        .pack-tile-label {
+            font-size: 0.72rem; text-transform: uppercase;
+            letter-spacing: 0.6px; color: var(--text-muted);
+        }
 
         /* ── Section Styles ─────────────────────────── */
         .section-light {
@@ -497,7 +543,7 @@ $_flashHtml  = display_flash_messages();
         .cart-table-wrap { overflow-x: auto; }
         .cart-item-img {
             width: 64px; height: 64px; border-radius: 8px;
-            object-fit: cover; background: rgba(198,183,155,0.05);
+            object-fit: contain; background: rgba(198,183,155,0.05);
         }
         .qty-control {
             display: flex; align-items: center; gap: 0;
@@ -580,7 +626,7 @@ $_flashHtml  = display_flash_messages();
             padding: 40px 24px;
         }
         .product-detail-img {
-            width: 100%; aspect-ratio: 1; border-radius: var(--radius);
+            width: 100%; aspect-ratio: 2/1; border-radius: var(--radius);
             object-fit: cover; background: rgba(198,183,155,0.05);
         }
         .product-detail-img-placeholder {
@@ -623,12 +669,19 @@ $_flashHtml  = display_flash_messages();
 </head>
 <body>
 
+<?php if ($_announcement !== ''): ?>
+<div role="status" style="background:var(--gold);color:var(--navy);padding:9px 24px;text-align:center;font-size:.86rem;font-weight:600;"><?= sanitize($_announcement) ?></div>
+<?php endif; ?>
+
 <!-- ═══ Navigation ═══ -->
 <nav class="navbar">
     <div class="navbar-inner">
         <a href="/" class="navbar-brand">
-            <img src="/assets/images/logo-front.png" alt="Bareeda Injera Logo">
-            <span>Bareeda</span>
+            <img src="/assets/images/logo-b-transparent.png" alt="Bareeda Injera Logo">
+            <span class="navbar-brand-text">
+                <span class="navbar-brand-am">በሬዳ እንጀራ</span>
+                <span class="navbar-brand-en">Bareeda Injera</span>
+            </span>
         </a>
 
         <button class="mobile-toggle" onclick="document.querySelector('.navbar-links').classList.toggle('open');document.querySelector('.nav-auth').classList.toggle('open')" aria-label="Menu">
@@ -656,8 +709,6 @@ $_flashHtml  = display_flash_messages();
                     <a href="/admin" style="color: var(--gold); font-size: 0.82rem; padding: 8px 12px;">Admin</a>
                 <?php endif; ?>
                 <a href="/logout" style="color: var(--text-muted); font-size: 0.82rem; padding: 8px 12px;">Logout</a>
-            <?php else: ?>
-                <a href="/login" class="btn btn-secondary" style="padding: 8px 18px; font-size: 0.82rem;">Login</a>
             <?php endif; ?>
         </div>
     </div>
@@ -678,13 +729,13 @@ $_flashHtml  = display_flash_messages();
     <div class="footer-inner">
         <div class="footer-brand">
             <img src="/assets/images/logo-front.png" alt="Bareeda Injera">
-            <p>Premium teff injera, baked fresh daily and delivered to your door across Addis Ababa.</p>
+            <p>Premium teff injera, baked fresh daily and delivered to your door across <?= sanitize($_businessCity) ?>.</p>
             <p class="amharic">በሬዳ እንጀራ &mdash; ንጹህ ጤፍ፣ ትኩስ እንጀራ</p>
             <div class="footer-social">
-                <a href="https://t.me/bareedainjera" title="Telegram" target="_blank" rel="noopener">&#9993;</a>
-                <a href="https://www.facebook.com/bareedainjera" title="Facebook" target="_blank" rel="noopener">f</a>
-                <a href="https://www.instagram.com/bareedainjera" title="Instagram" target="_blank" rel="noopener">&#9737;</a>
-                <a href="tel:+251940434748" title="Call Us">&#9742;</a>
+                <?php if (setting('telegram_url') !== ''): ?><a href="<?= sanitize(setting('telegram_url')) ?>" aria-label="Telegram" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></a><?php endif; ?>
+                <?php if (setting('facebook_url') !== ''): ?><a href="<?= sanitize(setting('facebook_url')) ?>" aria-label="Facebook" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3Z"/></svg></a><?php endif; ?>
+                <?php if (setting('instagram_url') !== ''): ?><a href="<?= sanitize(setting('instagram_url')) ?>" aria-label="Instagram" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".5" fill="currentColor"/></svg></a><?php endif; ?>
+                <a href="tel:<?= sanitize(preg_replace('/[^0-9+]/', '', $_contactPhone)) ?>" aria-label="Call Bareeda"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.8a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92Z"/></svg></a>
             </div>
         </div>
 
@@ -699,15 +750,15 @@ $_flashHtml  = display_flash_messages();
         </div>
 
         <div>
-            <h4>Account</h4>
+            <h4><?= $_isLoggedIn ? 'Account' : 'Shopping' ?></h4>
             <ul>
                 <?php if ($_isLoggedIn): ?>
                     <li><a href="/account">Dashboard</a></li>
                     <li><a href="/orders">My Orders</a></li>
                     <li><a href="/subscriptions">Subscriptions</a></li>
                 <?php else: ?>
-                    <li><a href="/login">Login</a></li>
-                    <li><a href="/register">Register</a></li>
+                    <li><a href="/products">Browse Products</a></li>
+                    <li><a href="/checkout">Checkout</a></li>
                 <?php endif; ?>
                 <li><a href="/cart">Shopping Cart</a></li>
             </ul>
@@ -715,15 +766,16 @@ $_flashHtml  = display_flash_messages();
 
         <div class="footer-contact">
             <h4>Contact</h4>
-            <p><?= APP_PHONE ?></p>
-            <p><?= APP_EMAIL ?></p>
-            <p>Addis Ababa, Ethiopia</p>
+            <p><strong>Bareeda Injera and Foods PLC</strong></p>
+            <p><?= sanitize($_contactPhone) ?></p>
+            <p><?= sanitize($_contactEmail) ?></p>
+            <p><?= sanitize($_businessAddress) ?></p>
             <p style="margin-top: 12px; font-size: 0.82rem;">Mon&ndash;Sat: 6:00 AM &ndash; 6:00 PM</p>
         </div>
     </div>
 
     <div class="footer-bottom">
-        <p>&copy; <?= date('Y') ?> <?= APP_NAME ?>. All rights reserved. | <a href="/privacy" style="color: var(--text-muted);">Privacy</a> | <a href="/terms" style="color: var(--text-muted);">Terms</a></p>
+        <p>&copy; <?= date('Y') ?> Bareeda Injera and Foods PLC. All rights reserved. | <a href="/privacy" style="color: var(--text-muted);">Privacy</a> | <a href="/terms" style="color: var(--text-muted);">Terms</a></p>
     </div>
 </footer>
 

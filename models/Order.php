@@ -21,20 +21,22 @@ class Order
     // ─── Create ─────────────────────────────────────────────
 
     /**
-     * Place a new order.
+     * Place a new order. Supports logged-in users ($userId) and guests
+     * ($userId null + $guest contact details).
      *
-     * @param  int    $userId
+     * @param  int|null $userId
      * @param  array  $items         [['product_id' => int, 'quantity' => int], ...]
      * @param  string $deliveryAddress
-     * @param  string $paymentMethod  cod | bank_transfer | mobile_money
+     * @param  string $paymentMethod  cod | bank_transfer | mobile_money | ebirr
      * @param  string $notes
      * @param  string $couponCode     Optional coupon code
+     * @param  array  $guest          ['name' => string, 'phone' => string, 'email' => string] for guest orders
      * @return array  ['success' => bool, 'message' => string, 'order_id' => int|null, 'order_number' => string|null]
      */
-    public function create(int $userId, array $items, string $deliveryAddress, string $paymentMethod, string $notes = '', string $couponCode = ''): array
+    public function create(?int $userId, array $items, string $deliveryAddress, string $paymentMethod, string $notes = '', string $couponCode = '', ?int $deliveryZoneId = null, array $guest = []): array
     {
         // Validate payment method
-        $allowedMethods = ['cod', 'bank_transfer', 'mobile_money'];
+        $allowedMethods = ['cod', 'bank_transfer', 'mobile_money', 'ebirr'];
         if (!in_array($paymentMethod, $allowedMethods)) {
             return ['success' => false, 'message' => 'Invalid payment method.', 'order_id' => null, 'order_number' => null];
         }
@@ -49,11 +51,12 @@ class Order
 
         // Process in a transaction
         try {
-            return $this->db->transaction(function ($db) use ($userId, $items, $deliveryAddress, $paymentMethod, $notes, $couponCode) {
+            return $this->db->transaction(function ($db) use ($userId, $items, $deliveryAddress, $paymentMethod, $notes, $couponCode, $deliveryZoneId, $guest) {
 
                 // 1. Fetch product details and validate stock
                 $orderItems   = [];
                 $subtotal     = 0.0;
+                $totalPieces  = 0;
 
                 foreach ($items as $item) {
                     $productId = (int) $item['product_id'];
@@ -64,7 +67,7 @@ class Order
                     }
 
                     $product = $db->fetchOne(
-                        "SELECT id, name, price, stock_quantity, is_active FROM products WHERE id = ? FOR UPDATE",
+                        "SELECT id, name, price, pieces, stock_quantity, is_active FROM products WHERE id = ? FOR UPDATE",
                         [$productId]
                     );
 
@@ -78,6 +81,7 @@ class Order
 
                     $lineTotal = round($product['price'] * $quantity, 2);
                     $subtotal += $lineTotal;
+                    $totalPieces += $quantity * max(1, (int) ($product['pieces'] ?? 1));
 
                     $orderItems[] = [
                         'product_id'  => $productId,
@@ -97,10 +101,18 @@ class Order
 
                 // 2. Calculate delivery fee
                 $deliveryFee = 0.0;
-                if (defined('FREE_DELIVERY_THRESHOLD') && $subtotal >= FREE_DELIVERY_THRESHOLD) {
-                    $deliveryFee = 0.0;
-                } else {
-                    $deliveryFee = defined('DEFAULT_DELIVERY_FEE') ? (float) DEFAULT_DELIVERY_FEE : 50.0;
+                $zone = null;
+                if ($deliveryZoneId !== null) {
+                    $zone = $db->fetchOne("SELECT fee FROM delivery_zones WHERE id = ? AND is_active = 1", [$deliveryZoneId]);
+                    if (!$zone) {
+                        throw new InvalidArgumentException('The selected delivery zone is not available.');
+                    }
+                }
+                $freeDeliveryMinPieces = freeDeliveryMinPieces();
+                if ($totalPieces <= $freeDeliveryMinPieces) {
+                    $deliveryFee = $zone
+                        ? (float) $zone['fee']
+                        : (float) setting('default_delivery_fee', (string) DEFAULT_DELIVERY_FEE);
                 }
 
                 // 3. Apply coupon if provided
@@ -140,8 +152,9 @@ class Order
 
                 // 4. Check minimum order amount
                 $afterDiscount = $subtotal - $discountAmount;
-                if (defined('MIN_ORDER_AMOUNT') && $afterDiscount < MIN_ORDER_AMOUNT) {
-                    throw new InvalidArgumentException("Minimum order amount is " . MIN_ORDER_AMOUNT . " " . CURRENCY_SYMBOL . ".");
+                $minimumOrder = (float) setting('min_order_amount', (string) MIN_ORDER_AMOUNT);
+                if ($afterDiscount < $minimumOrder) {
+                    throw new InvalidArgumentException("Minimum order amount is " . $minimumOrder . " " . CURRENCY_CODE . ".");
                 }
 
                 $total = round($afterDiscount + $deliveryFee, 2);
@@ -152,6 +165,9 @@ class Order
                 // 6. Insert order
                 $orderId = $db->insert('orders', [
                     'user_id'          => $userId,
+                    'guest_name'       => $userId === null ? trim((string) ($guest['name'] ?? '')) : null,
+                    'guest_phone'      => $userId === null ? trim((string) ($guest['phone'] ?? '')) : null,
+                    'guest_email'      => $userId === null ? trim((string) ($guest['email'] ?? '')) : null,
                     'order_number'     => $orderNumber,
                     'subtotal'         => $subtotal,
                     'delivery_fee'     => $deliveryFee,
@@ -162,6 +178,15 @@ class Order
                     'payment_status'   => 'pending',
                     'delivery_address' => $deliveryAddress,
                     'delivery_notes'   => $notes,
+                ]);
+
+                $db->insert('order_events', [
+                    'order_id' => $orderId,
+                    'actor_user_id' => $userId,
+                    'event_type' => 'order_created',
+                    'from_status' => null,
+                    'to_status' => 'pending',
+                    'note' => 'Order created with ' . count($orderItems) . ' item line(s).',
                 ]);
 
                 // 7. Insert order items
@@ -202,9 +227,13 @@ class Order
     public function getById(int $id): ?array
     {
         $order = $this->db->fetchOne(
-            "SELECT o.*, u.email, u.first_name, u.last_name, u.phone
+            "SELECT o.*,
+                    COALESCE(u.first_name, o.guest_name, 'Guest') AS first_name,
+                    COALESCE(u.last_name, '') AS last_name,
+                    COALESCE(u.email, o.guest_email, '') AS email,
+                    COALESCE(u.phone, o.guest_phone, '') AS phone
              FROM orders o
-             INNER JOIN users u ON o.user_id = u.id
+             LEFT JOIN users u ON o.user_id = u.id
              WHERE o.id = ?",
             [$id]
         );
@@ -231,9 +260,13 @@ class Order
     public function getByOrderNumber(string $orderNumber): ?array
     {
         $order = $this->db->fetchOne(
-            "SELECT o.*, u.email, u.first_name, u.last_name, u.phone
+            "SELECT o.*,
+                    COALESCE(u.first_name, o.guest_name, 'Guest') AS first_name,
+                    COALESCE(u.last_name, '') AS last_name,
+                    COALESCE(u.email, o.guest_email, '') AS email,
+                    COALESCE(u.phone, o.guest_phone, '') AS phone
              FROM orders o
-             INNER JOIN users u ON o.user_id = u.id
+             LEFT JOIN users u ON o.user_id = u.id
              WHERE o.order_number = ?",
             [$orderNumber]
         );
@@ -289,9 +322,13 @@ class Order
      */
     public function getAll(?string $status = null, int $limit = 25, int $offset = 0): array
     {
-        $sql = "SELECT o.*, u.email, u.first_name, u.last_name, u.phone
+        $sql = "SELECT o.*,
+                       COALESCE(u.first_name, o.guest_name, 'Guest') AS first_name,
+                       COALESCE(u.last_name, '') AS last_name,
+                       COALESCE(u.email, o.guest_email, '') AS email,
+                       COALESCE(u.phone, o.guest_phone, '') AS phone
                 FROM orders o
-                INNER JOIN users u ON o.user_id = u.id";
+                LEFT JOIN users u ON o.user_id = u.id";
 
         $params = [];
         if ($status !== null && $status !== '') {
@@ -333,17 +370,38 @@ class Order
     public function updateStatus(int $id, string $status): bool
     {
         $allowed = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'];
-        if (!in_array($status, $allowed)) {
+        if (!in_array($status, $allowed, true)) {
             return false;
         }
 
-        // If cancelling, restore stock
-        if ($status === 'cancelled') {
-            $this->restoreStockOnCancel($id);
-        }
+        try {
+            return $this->db->transaction(function ($db) use ($id, $status) {
+                $order = $db->fetchOne("SELECT status FROM orders WHERE id = ? FOR UPDATE", [$id]);
+                if (!$order) {
+                    return false;
+                }
+                if ($order['status'] === $status) {
+                    return true;
+                }
+                if ($status === 'cancelled') {
+                    $this->restoreStockOnCancel($id);
+                }
 
-        $affected = $this->db->update('orders', ['status' => $status], 'id = ?', [$id]);
-        return $affected > 0;
+                $db->update('orders', ['status' => $status], 'id = ?', [$id]);
+                $db->insert('order_events', [
+                    'order_id' => $id,
+                    'actor_user_id' => currentUserId(),
+                    'event_type' => 'fulfillment',
+                    'from_status' => $order['status'],
+                    'to_status' => $status,
+                    'note' => $status === 'cancelled' ? 'Order cancelled and stock restored once.' : null,
+                ]);
+                return true;
+            });
+        } catch (Throwable $e) {
+            $this->logError('Order status update failed: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -356,12 +414,46 @@ class Order
     public function updatePaymentStatus(int $id, string $status): bool
     {
         $allowed = ['pending', 'paid', 'refunded'];
-        if (!in_array($status, $allowed)) {
+        if (!in_array($status, $allowed, true)) {
             return false;
         }
 
-        $affected = $this->db->update('orders', ['payment_status' => $status], 'id = ?', [$id]);
-        return $affected > 0;
+        try {
+            return $this->db->transaction(function ($db) use ($id, $status) {
+                $order = $db->fetchOne("SELECT payment_status FROM orders WHERE id = ? FOR UPDATE", [$id]);
+                if (!$order) {
+                    return false;
+                }
+                if ($order['payment_status'] === $status) {
+                    return true;
+                }
+
+                $db->update('orders', ['payment_status' => $status], 'id = ?', [$id]);
+                $db->insert('order_events', [
+                    'order_id' => $id,
+                    'actor_user_id' => currentUserId(),
+                    'event_type' => 'payment_manual',
+                    'from_status' => $order['payment_status'],
+                    'to_status' => $status,
+                    'note' => 'Payment status changed by an administrator.',
+                ]);
+                return true;
+            });
+        } catch (Throwable $e) {
+            $this->logError('Payment status update failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getEvents(int $id): array
+    {
+        return $this->db->query(
+            "SELECT oe.*, u.first_name, u.last_name
+             FROM order_events oe
+             LEFT JOIN users u ON u.id = oe.actor_user_id
+             WHERE oe.order_id = ? ORDER BY oe.id DESC",
+            [$id]
+        );
     }
 
     // ─── Order Statistics (Admin Dashboard) ─────────────────

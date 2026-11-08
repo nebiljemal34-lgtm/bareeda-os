@@ -2,6 +2,19 @@
 /**
  * View: Contact Page
  */
+
+$contactPhone = setting('contact_phone', APP_PHONE);
+$contactEmail = setting('contact_email', APP_EMAIL);
+$businessCity = setting('business_city', 'Dire Dawa');
+$businessAddress = setting('business_address', 'Jerba Aliyi');
+$fullAddress = $businessAddress;
+if (stripos($fullAddress, $businessCity) === false) {
+    $fullAddress .= ', ' . $businessCity;
+}
+if (stripos($fullAddress, 'Ethiopia') === false) {
+    $fullAddress .= ', Ethiopia';
+}
+$phoneHref = preg_replace('/[^0-9+]/', '', $contactPhone);
 ?>
 
 <!-- ═══ Page Header ═══ -->
@@ -20,34 +33,34 @@
                 <h2 style="color: var(--gold); margin-bottom: 24px;">Get In Touch</h2>
 
                 <div class="contact-info-card">
-                    <div class="contact-info-icon">&#9742;</div>
+                    <div class="contact-info-icon" style="color: var(--gold);"><?= icon('phone', 22) ?></div>
                     <div class="contact-info-text">
                         <h4>Phone</h4>
-                        <p><?= APP_PHONE ?></p>
+                        <p><a href="tel:<?= sanitize($phoneHref) ?>" style="color: inherit;"><?= sanitize($contactPhone) ?></a></p>
                         <p style="font-size: 0.78rem; opacity: 0.7;">Call or Telegram</p>
                     </div>
                 </div>
 
                 <div class="contact-info-card">
-                    <div class="contact-info-icon">&#9993;</div>
+                    <div class="contact-info-icon" style="color: var(--gold);"><?= icon('mail', 22) ?></div>
                     <div class="contact-info-text">
                         <h4>Email</h4>
-                        <p><?= APP_EMAIL ?></p>
+                        <p><a href="mailto:<?= sanitize($contactEmail) ?>" style="color: inherit; overflow-wrap: anywhere;"><?= sanitize($contactEmail) ?></a></p>
                         <p style="font-size: 0.78rem; opacity: 0.7;">We reply within 24 hours</p>
                     </div>
                 </div>
 
                 <div class="contact-info-card">
-                    <div class="contact-info-icon">&#128205;</div>
+                    <div class="contact-info-icon" style="color: var(--gold);"><?= icon('map-pin', 22) ?></div>
                     <div class="contact-info-text">
                         <h4>Address</h4>
-                        <p>Addis Ababa, Ethiopia</p>
-                        <p style="font-size: 0.78rem; opacity: 0.7;">Delivery across all sub-cities</p>
+                        <p><?= sanitize($fullAddress) ?></p>
+                        <p style="font-size: 0.78rem; opacity: 0.7;">Local delivery across <?= sanitize($businessCity) ?></p>
                     </div>
                 </div>
 
                 <div class="contact-info-card">
-                    <div class="contact-info-icon">&#128338;</div>
+                    <div class="contact-info-icon" style="color: var(--gold);"><?= icon('clock', 22) ?></div>
                     <div class="contact-info-text">
                         <h4>Business Hours</h4>
                         <p>Monday &ndash; Saturday: 6:00 AM &ndash; 6:00 PM</p>
@@ -59,10 +72,16 @@
                 <div style="margin-top: 32px;">
                     <h3 style="color: var(--gold); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">Follow Us</h3>
                     <div class="footer-social">
-                        <a href="https://t.me/bareedainjera" title="Telegram" target="_blank" rel="noopener">&#9993;</a>
-                        <a href="https://www.facebook.com/bareedainjera" title="Facebook" target="_blank" rel="noopener">f</a>
-                        <a href="https://www.instagram.com/bareedainjera" title="Instagram" target="_blank" rel="noopener">&#9737;</a>
-                        <a href="tel:+251940434748" title="Call Us">&#9742;</a>
+                        <?php if (setting('telegram_url') !== ''): ?>
+                            <a href="<?= sanitize(setting('telegram_url')) ?>" title="Telegram" aria-label="Telegram" target="_blank" rel="noopener"><?= icon('send', 18) ?></a>
+                        <?php endif; ?>
+                        <?php if (setting('facebook_url') !== ''): ?>
+                            <a href="<?= sanitize(setting('facebook_url')) ?>" title="Facebook" aria-label="Facebook" target="_blank" rel="noopener"><?= icon('facebook', 18) ?></a>
+                        <?php endif; ?>
+                        <?php if (setting('instagram_url') !== ''): ?>
+                            <a href="<?= sanitize(setting('instagram_url')) ?>" title="Instagram" aria-label="Instagram" target="_blank" rel="noopener"><?= icon('instagram', 18) ?></a>
+                        <?php endif; ?>
+                        <a href="tel:<?= sanitize($phoneHref) ?>" title="Call Us" aria-label="Call Bareeda"><?= icon('phone', 18) ?></a>
                     </div>
                 </div>
             </div>
@@ -105,13 +124,13 @@
             </div>
         </div>
 
-        <!-- Map Placeholder -->
-        <div class="mt-4" style="border-radius: var(--radius); overflow: hidden; height: 300px; background: rgba(198,183,155,0.04); border: 1px solid rgba(198,183,155,0.08); display: flex; align-items: center; justify-content: center;">
-            <div class="text-center">
-                <div style="font-size: 3rem; opacity: 0.3; margin-bottom: 12px;">&#127758;</div>
-                <p class="text-muted">Map &mdash; Addis Ababa, Ethiopia</p>
-                <p style="font-size: 0.8rem; color: var(--text-muted); opacity: 0.5;">Google Maps embed can be added here</p>
+        <a class="card mt-4" href="https://maps.google.com/?q=Jerba+Aliyi+Dire+Dawa+Ethiopia" target="_blank" rel="noopener" style="display: flex; align-items: center; justify-content: center; gap: 20px; min-height: 180px; text-align: left; text-decoration: none;">
+            <div style="color: var(--gold); flex-shrink: 0;"><?= icon('map-pin', 48) ?></div>
+            <div>
+                <h2 style="color: var(--gold); font-size: 1.2rem; margin-bottom: 8px;">Find Our Bakery</h2>
+                <p class="text-muted"><?= sanitize($fullAddress) ?></p>
+                <p style="color: var(--gold); font-size: 0.85rem; margin-top: 12px;">Open in Google Maps &nearr;</p>
             </div>
-        </div>
+        </a>
     </div>
 </section>

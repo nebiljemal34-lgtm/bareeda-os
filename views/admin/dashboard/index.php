@@ -33,6 +33,18 @@
         <div class="adm-stat-value"><?= number_format($activeSubscriptions) ?></div>
         <div class="adm-stat-trend" style="color:var(--adm-muted);">Recurring deliveries</div>
     </div>
+
+    <div class="adm-stat-card">
+        <div class="adm-stat-label">Visitors · 30 Days</div>
+        <div class="adm-stat-value"><?= number_format($analytics['visitors']) ?></div>
+        <div class="adm-stat-trend" style="color:var(--adm-muted);"><a href="/admin/analytics"><?= number_format($analytics['page_views']) ?> page views</a></div>
+    </div>
+
+    <div class="adm-stat-card">
+        <div class="adm-stat-label">QR Page Opens · 30 Days</div>
+        <div class="adm-stat-value"><?= number_format($analytics['qr_scans']) ?></div>
+        <div class="adm-stat-trend" style="color:var(--adm-muted);"><a href="/admin/analytics"><?= number_format($analytics['qr_visitors']) ?> unique QR visitors</a></div>
+    </div>
 </div>
 
 <!-- ── Quick Actions ────────────────────────────────────── -->

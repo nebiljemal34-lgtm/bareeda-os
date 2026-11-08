@@ -18,7 +18,7 @@
 
     <?php if (empty($products)): ?>
         <div class="empty-state">
-            <div class="empty-state-icon">&#128230;</div>
+            <div class="empty-state-icon" style="color: var(--gold);"><?= icon('package', 56) ?></div>
             <h2>No Products</h2>
             <p>Add your first product to get started.</p>
             <a href="/admin/products/create" class="btn btn-primary">Add Product</a>
