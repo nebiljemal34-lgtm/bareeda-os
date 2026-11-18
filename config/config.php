@@ -54,6 +54,13 @@ define('PAYMENT_WEBHOOK_IS_PLACEHOLDER', empty($_webhook_raw)
     || strlen($_webhook_raw) < 16);
 unset($_webhook_raw);
 
+// ─── ERP Integration ────────────────────────────────────────
+// The website server proxies public letter verification to the ERP, so the
+// factory network is never exposed to the browser. Point this at the ERP
+// origin (an /api suffix is accepted and stripped). Every outbound call is
+// made server-side.
+define('ERP_API_BASE_URL', rtrim(getenv('ERP_API_BASE_URL') ?: 'https://verify.bareeda-injera.com', '/'));
+
 // ─── Currency / Locale ─────────────────────────────────────
 define('CURRENCY_CODE', 'ETB');
 define('CURRENCY_POSITION', 'after');       // "100 ETB"

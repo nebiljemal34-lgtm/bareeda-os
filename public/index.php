@@ -117,6 +117,15 @@ $router->get('/links', 'LinkController@index');
 $router->get('/links/', 'LinkController@index');
 $router->post('/analytics/qr-scan', 'AnalyticsController@qrScan');
 
+// --- Letter verification (printed QR landing, public) ---
+$router->get('/verify', 'VerifyController@show');
+$router->get('/verify/l/{token}', 'VerifyController@show');
+$router->get('/verify/l/{token}/qr', 'VerifyController@qr');
+$router->get('/verify/{token}', 'VerifyController@show');
+$router->get('/verify/{token}/qr', 'VerifyController@qr');
+$router->get('/api/verify/{token}', 'VerifyController@jsonState');
+$router->get('/api/verify/{token}/qr', 'VerifyController@qr');
+
 // --- Cart Routes ---
 $router->get('/cart', 'CartController@index');
 $router->post('/cart/add', 'CartController@add', ['csrf']);

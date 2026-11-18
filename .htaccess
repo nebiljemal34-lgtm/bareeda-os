@@ -39,6 +39,12 @@ RewriteRule .* - [F]
     </IfModule>
 </FilesMatch>
 
+# ─── Public letter verification ─────────────────────────────
+# Printed-letter QR landing (/verify/l/<token>) and the QR/JSON endpoints.
+# Public by design — no login — and handled by the front controller.
+RewriteRule ^verify(/.*)?$ public/index.php [QSA,L]
+RewriteRule ^api/verify(/.*)?$ public/index.php [QSA,L]
+
 # ─── Front Controller ───────────────────────────────────────
 # Route all non-file, non-directory requests to index.php
 RewriteCond %{REQUEST_FILENAME} !-f

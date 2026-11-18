@@ -25,10 +25,12 @@ $_businessAddress = setting('business_address', $_businessCity . ', Ethiopia');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($_pageTitle) ?> | <?= sanitize($_siteName) ?></title>
     <meta name="description" content="Fresh teff injera delivered daily in <?= sanitize($_businessCity) ?>. 100% natural, traditionally made.">
+    <?php if (!empty($page_robots)): ?><meta name="robots" content="<?= sanitize($page_robots) ?>"><?php endif; ?>
     <link rel="icon" type="image/png" href="/assets/images/logo-front.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+Ethiopic:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+Ethiopic:wght@600;700&family=Playfair+Display:ital,wght@1,400;1,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
+    <?php if (!empty($page_css)): ?><link rel="stylesheet" href="<?= sanitize($page_css) ?>"><?php endif; ?>
     <style>
         /* ── Navigation ─────────────────────────────── */
         .navbar {
@@ -746,6 +748,7 @@ $_businessAddress = setting('business_address', $_businessCity . ', Ethiopia');
                 <li><a href="/products">Shop</a></li>
                 <li><a href="/about">About Us</a></li>
                 <li><a href="/contact">Contact</a></li>
+                <li><a href="/verify">Verify a Letter</a></li>
             </ul>
         </div>
 

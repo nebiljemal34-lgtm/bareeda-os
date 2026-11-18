@@ -64,6 +64,27 @@ bareeda-website/
 
 ---
 
+## Letter Verification (printed QR)
+
+Public, no-auth pages that resolve a letter token against the ERP letter register.
+
+| Route | Purpose |
+|---|---|
+| `GET /verify` | Manual entry form (paste code or full URL) |
+| `GET /verify/l/{token}` | Printed-QR landing page (canonical) |
+| `GET /verify/{token}` | Alias of the above |
+| `GET /verify/l/{token}/qr` | QR PNG for the token (also `/verify/{token}/qr`, `?qr=1`) |
+| `GET /api/verify/{token}` | JSON state: `active` / `revoked` / `altered` / `unknown` |
+| `GET /api/verify/{token}/qr` | QR PNG (application-facing alias) |
+
+- **Proxy:** all ERP calls are made server-side by `classes/ErpClient.php`; the browser never talks to the ERP. Configure the ERP origin with the `ERP_API_BASE_URL` environment variable (default `http://127.0.0.1:3001`).
+- **States** map 1:1 from the ERP: `active` → Verified, `revoked` → Cancelled, `altered` → Altered, `unknown`/bad token → Not recognised (404), ERP unreachable → Temporarily unavailable (503).
+- **Token shape** is validated (`[A-Za-z0-9_-]{20,44}`) before any outbound request, so malformed codes never reach the ERP.
+- **QR bytes** are served by the ERP (`errorCorrectionLevel M`, `width 720`, `margin 1`, dark `#00283f`) and streamed through unchanged.
+- Verification pages send `X-Robots-Tag: noindex, nofollow` plus a matching robots meta tag.
+
+---
+
 ## Project Status
 
 - [x] Business card QR code generated
