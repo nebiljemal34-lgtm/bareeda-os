@@ -272,7 +272,7 @@ class VerifyController extends BaseController
         $this->render('verify/show', [
             'page_title'    => 'Verify a Letter',
             'page_robots'   => 'noindex, nofollow',
-            'page_css'      => '/assets/css/verify.css',
+            'page_css'      => '/assets/css/verify.css?v=20261120',
             'verify_state'  => $result === null ? null : $result['state'],
             'verify'        => $result === null ? null : $this->present($result),
             'verify_token'  => $token,
