@@ -6,12 +6,11 @@
 ?>
 
 <!-- ═══ Hero Section ═══ -->
-<section class="hero" style="position: relative; overflow: hidden;">
-    <img src="/assets/images/injera-product-hd.png" alt="" aria-hidden="true" loading="eager" style="position: absolute; top: 0; left: -20%; width: 140%; height: 100%; object-fit: cover; opacity: 0.05; pointer-events: none;">
-    <div class="hero-content" style="position: relative; z-index: 1;">
+<section class="hero">
+    <div class="hero-content">
         <p class="subtitle">100% Organic Teff &bull; Baked Fresh Daily</p>
         <h1>
-            Fresh Teff Injera
+            Fresh Teff Injera,
             <em>Delivered Daily</em>
         </h1>
         <p class="subtitle-am">100% ከጤፍ ብቻ የተዘጋጀ እንጀራ</p>
@@ -26,7 +25,7 @@
 <?php if (!empty($featured)): ?>
 <section class="section">
     <div class="container">
-        <h2 class="section-title">Our Products</h2>
+        <h2 class="section-title">Our Products &middot; </h2>
         <div class="grid grid-3" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
             <?php foreach ($featured as $product): ?>
             <div class="product-card">
@@ -40,7 +39,6 @@
                     <?php if (!empty($product['name_am'])): ?>
                         <div class="product-card-name-am"><?= htmlspecialchars($product['name_am']) ?></div>
                     <?php endif; ?>
-                    <?= productPackMeta($product) ?>
                     <div class="product-card-price"><?= formatPrice((float) $product['price']) ?></div>
                     <div class="product-card-actions">
                         <a href="/products/<?= (int) $product['id'] ?>" class="btn btn-secondary">View Details</a>
@@ -67,7 +65,7 @@
 <!-- ═══ Why Choose Us ═══ -->
 <section class="section section-light">
     <div class="container">
-        <h2 class="section-title">Why Choose Bareeda</h2>
+        <h2 class="section-title">Why Choose Bareeda &middot; ለምን በሬዳ?</h2>
         <div class="grid grid-3">
             <div class="feature-card card">
                 <div class="feature-icon"><?= icon('leaf', 32) ?></div>
@@ -82,7 +80,7 @@
             <div class="feature-card card">
                 <div class="feature-icon"><?= icon('truck', 32) ?></div>
                 <h3>Free Delivery</h3>
-                <p>Free delivery on orders of more than <?= freeDeliveryMinPieces() ?> pieces of injera.</p>
+                <p>Free delivery on orders of more than 100 pieces of injera. ከ100 እንጀራ በላይ ለሚያዙ ነፃ ማድረስ!</p>
             </div>
         </div>
     </div>
@@ -90,7 +88,7 @@
 
 <!-- ═══ Newsletter ═══ -->
 <section class="newsletter">
-    <h2>Stay Fresh</h2>
+    <h2>Stay Fresh &middot; ትኩስ ሁን</h2>
     <p>Subscribe to our newsletter for exclusive offers, new products, and injera tips delivered to your inbox.</p>
     <form class="newsletter-form" method="POST" action="/contact">
         <?= csrf_field() ?>
