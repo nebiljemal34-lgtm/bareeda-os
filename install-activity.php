@@ -23,8 +23,10 @@ if ($secret === '' || !hash_equals($secret, $given)) {
 /** The bareeda-website installer may be an older schema — the analytics
  * migration tolerates an existing table. Values come from the ERP's
  * notification bot (never committed). */
-$BOT_TOKEN = (string) (getenv('ACTIVITY_BOT_TOKEN') ?: '');
-$CHAT_ID   = (string) (getenv('ACTIVITY_CHAT_ID') ?: '');
+$BOT_TOKEN = defined('ACTIVITY_BOT_TOKEN') ? (string) ACTIVITY_BOT_TOKEN
+    : (string) (getenv('ACTIVITY_BOT_TOKEN') ?: '');
+$CHAT_ID   = defined('ACTIVITY_CHAT_ID') ? (string) ACTIVITY_CHAT_ID
+    : (string) (getenv('ACTIVITY_CHAT_ID') ?: '');
 
 try {
     $db = Database::getInstance()->getPdo();
