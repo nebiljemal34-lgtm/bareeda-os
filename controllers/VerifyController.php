@@ -10,6 +10,7 @@
 
 require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../classes/ErpClient.php';
+require_once __DIR__ . '/../classes/VerifyStore.php';
 
 class VerifyController extends BaseController
 {
@@ -44,6 +45,23 @@ class VerifyController extends BaseController
             return;
         }
 
+        // 1) Snapshot replication: the ERP pushes each letter here at issue,
+        //    so verification needs no factory connection at scan time.
+        $replicated = VerifyStore::find($token);
+        if ($replicated !== null) {
+            $result = $this->present($replicated['result'] ?? []);
+            $result['state'] = ($replicated['state'] ?? 'Active') === 'Revoked'
+                ? 'revoked'
+                : ($result['state'] ?? 'active');
+            if ($result['state'] === 'unknown') {
+                $this->renderPage($this->emptyResult('unknown'), $token, 404);
+                return;
+            }
+            $this->renderPage($result, $token, 200);
+            return;
+        }
+
+        // 2) Fallback: live ERP lookup (older letters that predate replication).
         $response = (new ErpClient())->verification($token);
 
         if ($response['ok']) {
@@ -106,11 +124,52 @@ class VerifyController extends BaseController
     }
 
     /**
+     * POST /api/verify/ingest — the ERP pushes a letter's frozen public
+     * snapshot here at issue/reissue/revoke. Authenticated by a shared
+     * secret header so only the factory ERP may write.
+     */
+    public function ingest(): void
+    {
+        header('X-Robots-Tag: noindex, nofollow');
+        header('Cache-Control: no-store');
+        header('Referrer-Policy: no-referrer');
+        header('X-Content-Type-Options: nosniff');
+        header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
+
+        $expected = (string) ERP_INGEST_SECRET;
+        $given = (string) ($_SERVER['HTTP_X_INGEST_SECRET'] ?? '');
+        if ($expected === '' || !hash_equals($expected, $given)) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Forbidden']);
+            return;
+        }
+
+        $raw = file_get_contents('php://input') ?: '';
+        $payload = json_decode($raw, true);
+        if (!is_array($payload) || !isset($payload['token'], $payload['result'])) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Malformed payload']);
+            return;
+        }
+
+        if (!VerifyStore::upsert($payload)) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Rejected']);
+            return;
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => true]);
+    }
+
+    /**
      * GET /api/verify/{token} — JSON passthrough for scanner apps.
      */
     public function jsonState(string $token = ''): void
-    {
-        header('X-Robots-Tag: noindex, nofollow');
+    {        header('X-Robots-Tag: noindex, nofollow');
         header('Cache-Control: no-store, max-age=0');
         header('Referrer-Policy: no-referrer');
         header('X-Content-Type-Options: nosniff');

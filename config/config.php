@@ -61,6 +61,11 @@ unset($_webhook_raw);
 // made server-side.
 define('ERP_API_BASE_URL', rtrim(getenv('ERP_API_BASE_URL') ?: 'https://verify.bareeda-injera.com', '/'));
 
+// Snapshot replication: shared secret between the factory ERP and this
+// site. The ERP pushes each letter's frozen public payload to
+// POST /api/verify/ingest with this in the X-Ingest-Secret header.
+define('ERP_INGEST_SECRET', getenv('ERP_INGEST_SECRET') ?: '');
+
 // ─── Currency / Locale ─────────────────────────────────────
 define('CURRENCY_CODE', 'ETB');
 define('CURRENCY_POSITION', 'after');       // "100 ETB"

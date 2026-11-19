@@ -123,6 +123,7 @@ $router->get('/verify/l/{token}', 'VerifyController@show');
 $router->get('/verify/l/{token}/qr', 'VerifyController@qr');
 $router->get('/verify/{token}', 'VerifyController@show');
 $router->get('/verify/{token}/qr', 'VerifyController@qr');
+$router->post('/api/verify/ingest', 'VerifyController@ingest');
 $router->get('/api/verify/{token}', 'VerifyController@jsonState');
 $router->get('/api/verify/{token}/qr', 'VerifyController@qr');
 
