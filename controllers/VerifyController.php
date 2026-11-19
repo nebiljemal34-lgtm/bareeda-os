@@ -314,7 +314,9 @@ class VerifyController extends BaseController
         $this->render('verify/show', [
             'page_title'    => 'Verify a Letter',
             'page_robots'   => 'noindex, nofollow',
-            'page_css'      => '/assets/css/verify.css?v=20261120',
+            // Inline the stylesheet: the page must keep its design even when a
+            // mobile network drops the external CSS or a CDN serves a stale copy.
+            'page_inline_css' => (string) @file_get_contents(BASE_PATH . 'assets/css/verify.css'),
             'verify_state'  => $result === null ? null : $result['state'],
             'verify'        => $result === null ? null : $this->present($result),
             'verify_token'  => $token,

@@ -31,6 +31,7 @@ $_businessAddress = setting('business_address', $_businessCity . ', Ethiopia');
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+Ethiopic:wght@600;700&family=Playfair+Display:ital,wght@1,400;1,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
     <?php if (!empty($page_css)): ?><link rel="stylesheet" href="<?= sanitize($page_css) ?>"><?php endif; ?>
+    <?php if (!empty($page_inline_css)): ?><style><?= $page_inline_css ?></style><?php endif; ?>
     <style>
         /* ── Navigation ─────────────────────────────── */
         .navbar {
