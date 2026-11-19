@@ -49,15 +49,16 @@ class VerifyController extends BaseController
         //    so verification needs no factory connection at scan time.
         $replicated = VerifyStore::find($token);
         if ($replicated !== null) {
-            $result = $this->present($replicated['result'] ?? []);
-            $result['state'] = ($replicated['state'] ?? 'Active') === 'Revoked'
+            // renderPage() runs present() itself; hand it the raw snapshot.
+            $raw = is_array($replicated['result'] ?? null) ? $replicated['result'] : [];
+            $raw['state'] = ($replicated['state'] ?? 'Active') === 'Revoked'
                 ? 'revoked'
-                : ($result['state'] ?? 'active');
-            if ($result['state'] === 'unknown') {
+                : ($raw['state'] ?? 'active');
+            if ($raw['state'] === 'unknown') {
                 $this->renderPage($this->emptyResult('unknown'), $token, 404);
                 return;
             }
-            $this->renderPage($result, $token, 200);
+            $this->renderPage($raw, $token, 200);
             return;
         }
 
@@ -276,7 +277,7 @@ class VerifyController extends BaseController
             'withheld'       => !empty($result['detailsWithheld']),
             'sealed'         => !empty($result['sealed']),
             'keyId'          => $result['keyId'] ?? '',
-            'letter_date'    => $this->formatDate($result['date']),
+            'letter_date'    => $this->formatDate($result['date'] ?? ''),
             'subject'        => $result['subject'],
             'issued_to'      => $result['organisation'],
             'signed_by'      => $result['signatoryTitle'],
