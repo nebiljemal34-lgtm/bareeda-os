@@ -7,8 +7,8 @@
  *
  * Usage: https://www.bareeda-injera.com/install-verify.php?key=<secret>
  */
-require_once __DIR__ . '/config/config.php';
-require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/database.php';
 
 header('Content-Type: text/plain; charset=utf-8');
 
