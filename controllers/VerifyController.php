@@ -11,16 +11,37 @@
 require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../classes/ErpClient.php';
 require_once __DIR__ . '/../classes/VerifyStore.php';
+require_once __DIR__ . '/../classes/RateLimit.php';
 
 class VerifyController extends BaseController
 {
     private const TOKEN_PATTERN = '/^[A-Za-z0-9_-]{20,44}$/';
+
+    /** Sliding-window limits per client IP (audit MEDIUM-2). */
+    private const VERIFY_LIMIT     = 60;  // per minute, per IP
+    private const INGEST_LIMIT     = 20;  // per minute, per IP
+    private const INGEST_FAIL_LIMIT = 10; // failed (wrong-secret) attempts, per minute
+
+    private function throttle(string $bucket, int $limit, int $window = 60): bool
+    {
+        if (RateLimit::check($bucket, $limit, $window)) {
+            return true;
+        }
+        http_response_code(429);
+        header('Retry-After: ' . RateLimit::retryAfter($bucket, $window));
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'Too many requests. Please try again shortly.';
+        return false;
+    }
 
     /**
      * GET /verify, /verify/l/{token}, /verify/{token}
      */
     public function show(string $token = ''): void
     {
+        if (!$this->throttle('verify:' . RateLimit::clientIp(), self::VERIFY_LIMIT)) {
+            return;
+        }
         header('X-Robots-Tag: noindex, nofollow');
         header('Cache-Control: no-store, max-age=0');
         header('Referrer-Policy: no-referrer');
@@ -92,6 +113,9 @@ class VerifyController extends BaseController
      */
     public function qr(string $token = ''): void
     {
+        if (!$this->throttle('verify:' . RateLimit::clientIp(), self::VERIFY_LIMIT)) {
+            return;
+        }
         header('X-Robots-Tag: noindex, nofollow');
 
         $token = $this->resolveToken($token);
@@ -137,9 +161,23 @@ class VerifyController extends BaseController
         header('X-Content-Type-Options: nosniff');
         header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
 
+        $ip = RateLimit::clientIp();
+        if (!$this->throttle('ingest:' . $ip, self::INGEST_LIMIT)) {
+            return;
+        }
+
         $expected = (string) ERP_INGEST_SECRET;
         $given = (string) ($_SERVER['HTTP_X_INGEST_SECRET'] ?? '');
         if ($expected === '' || !hash_equals($expected, $given)) {
+            // Wrong-secret attempts are throttled far harder than valid traffic:
+            // 10 failures per minute makes brute-forcing the secret impractical.
+            if (!RateLimit::check('ingest-fail:' . $ip, self::INGEST_FAIL_LIMIT, 60)) {
+                http_response_code(429);
+                header('Retry-After: ' . RateLimit::retryAfter('ingest-fail:' . $ip, 60));
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'error' => 'Too many requests']);
+                return;
+            }
             http_response_code(403);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => false, 'error' => 'Forbidden']);
@@ -170,7 +208,11 @@ class VerifyController extends BaseController
      * GET /api/verify/{token} — JSON passthrough for scanner apps.
      */
     public function jsonState(string $token = ''): void
-    {        header('X-Robots-Tag: noindex, nofollow');
+    {
+        if (!$this->throttle('verify:' . RateLimit::clientIp(), self::VERIFY_LIMIT)) {
+            return;
+        }
+        header('X-Robots-Tag: noindex, nofollow');
         header('Cache-Control: no-store, max-age=0');
         header('Referrer-Policy: no-referrer');
         header('X-Content-Type-Options: nosniff');
