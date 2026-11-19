@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/BaseController.php';
+require_once __DIR__ . '/../classes/Analytics.php';
+require_once __DIR__ . '/../classes/TelegramNotifier.php';
 
 class PaymentController extends BaseController
 {
@@ -79,6 +81,19 @@ class PaymentController extends BaseController
         $rawBody = file_get_contents('php://input') ?: '';
         $signature = $_SERVER['HTTP_X_PAYMENT_SIGNATURE'] ?? '';
         $result = $this->payments->handleCallback($provider, $rawBody, $signature);
+
+        // Activity Sentinel: every provider callback is an instant alert.
+        try {
+            Analytics::track('payment');
+            TelegramNotifier::notify('payment_event', [
+                'provider' => $provider,
+                'status'   => $result['status'] ?? ($result['success'] ?? 'unknown'),
+                'order'    => $result['order_number'] ?? ($result['reference'] ?? ''),
+            ]);
+        } catch (Throwable $e) {
+            error_log('payment sentinel failed: ' . $e->getMessage());
+        }
+
         $this->json($result, $result['code'] ?? 200);
     }
 

@@ -6,6 +6,8 @@
  */
 
 require_once __DIR__ . '/BaseController.php';
+require_once __DIR__ . '/../classes/Analytics.php';
+require_once __DIR__ . '/../classes/TelegramNotifier.php';
 
 class AuthController extends BaseController
 {
@@ -53,6 +55,11 @@ class AuthController extends BaseController
             redirect($redirectUrl);
         } else {
             flash('error', $result['message']);
+            try {
+                Analytics::track('failed_login', '/login');
+            } catch (Throwable $e) {
+                error_log('login sentinel failed: ' . $e->getMessage());
+            }
             redirect('/login');
         }
     }

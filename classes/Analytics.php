@@ -145,10 +145,39 @@ class Analytics
                 'event_type' => $eventType,
                 'visitor_token' => $token,
                 'path' => substr($path, 0, 255),
+                // Activity Sentinel: per-event context (behind Cloudflare the
+                // real client IP arrives in CF-Connecting-IP, and CF-IPCountry
+                // gives the visitor's country for free).
+                'ip' => self::clientIp(),
+                'country' => substr((string) ($_SERVER['HTTP_CF_IPCOUNTRY'] ?? ''), 0, 2),
+                'user_agent' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255),
+                'referrer' => substr((string) ($_SERVER['HTTP_REFERER'] ?? ''), 0, 255),
+                'user_id' => currentUserId() ?: null,
             ]);
         } catch (Throwable $e) {
             error_log('Analytics recording failed: ' . $e->getMessage());
         }
+    }
+
+    /** Real client IP (Cloudflare-aware). */
+    public static function clientIp(): string
+    {
+        $forwarded = $_SERVER['HTTP_CF_CONNECTING_IP']
+            ?? $_SERVER['HTTP_X_FORWARDED_FOR']
+            ?? '';
+        if ($forwarded !== '') {
+            $first = trim(explode(',', $forwarded)[0]);
+            if ($first !== '') {
+                return $first;
+            }
+        }
+        return (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    }
+
+    /** Public hook for business events (cart adds, payments, logins…). */
+    public static function track(string $eventType, string $path = ''): void
+    {
+        self::record($eventType, $path !== '' ? $path : ($_SERVER['REQUEST_URI'] ?? ''));
     }
 
     private static function visitorToken(): ?string

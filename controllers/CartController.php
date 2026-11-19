@@ -6,6 +6,8 @@
  */
 
 require_once __DIR__ . '/BaseController.php';
+require_once __DIR__ . '/../classes/Analytics.php';
+require_once __DIR__ . '/../classes/TelegramNotifier.php';
 
 class CartController extends BaseController
 {
@@ -44,6 +46,11 @@ class CartController extends BaseController
 
         if ($result['success']) {
             flash('success', $result['message']);
+            try {
+                Analytics::track('cart_add', '/products/' . $productId);
+            } catch (Throwable $e) {
+                error_log('cart sentinel failed: ' . $e->getMessage());
+            }
         } else {
             flash('error', $result['message']);
         }

@@ -14,6 +14,7 @@ class TelegramNotifier
         'new_registration' => 'New customer accounts',
         'contact_message'  => 'Contact form messages',
         'qr_scan'          => 'QR hub scans',
+        'payment_event'    => 'Payment activity',
     ];
 
     public const MAX_ATTEMPTS = 5;
@@ -271,6 +272,19 @@ class TelegramNotifier
                     $msg .= 'Notes: ' . $e($o['notes']) . "\n";
                 }
                 $msg .= "\nManage: " . APP_URL . '/admin/orders/' . (int) $o['id'];
+                return $msg;
+
+            case 'payment_event':
+                $msg = "<b>PAYMENT ACTIVITY</b>\n";
+                $msg .= 'Provider: ' . $e($data['provider'] ?? 'unknown') . "\n";
+                $msg .= 'Status: ' . $e((string) ($data['status'] ?? 'unknown')) . "\n";
+                if (($data['order'] ?? '') !== '') {
+                    $msg .= 'Order: ' . $e($data['order']) . "\n";
+                }
+                $msg .= 'Time: ' . $e($now) . "\n";
+                if (!empty($_SERVER['HTTP_CF_IPCOUNTRY'])) {
+                    $msg .= 'Country: ' . $e($_SERVER['HTTP_CF_IPCOUNTRY']) . "\n";
+                }
                 return $msg;
 
             case 'new_registration':
