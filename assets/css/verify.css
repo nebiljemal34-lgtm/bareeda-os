@@ -355,8 +355,7 @@
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
-@media (max-width: 700px) {
-  .verify-page {
+@media (max-width: 700px) {  .verify-page {
     padding: 28px 0 56px;
   }
 
@@ -410,6 +409,70 @@
 
   .verify-submit {
     width: 100%;
+  }
+}
+
+/* ── Small phones ────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .verify-page {
+    padding: 14px 0 40px;
+  }
+
+  .verify-card {
+    border-radius: 14px;
+  }
+
+  .verify-head {
+    padding: 14px 14px;
+    gap: 10px;
+  }
+
+  .verify-logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .verify-company {
+    font-size: 0.7rem;
+  }
+
+  .verify-tagline {
+    font-size: 0.78rem;
+  }
+
+  .verify-body {
+    padding: 18px 14px 22px;
+  }
+
+  .verify-title {
+    font-size: 1.22rem;
+  }
+
+  .verify-lede {
+    font-size: 0.9rem;
+  }
+
+  .verify-grid dt {
+    font-size: 0.62rem;
+  }
+
+  .verify-grid dd {
+    font-size: 0.88rem;
+  }
+
+  .verify-checkcode {
+    font-size: 1rem;
+  }
+
+  .verify-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .verify-actions .verify-button {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
   }
 }
 
