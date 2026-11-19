@@ -1,12 +1,15 @@
 <?php
 /**
- * Activity Sentinel status probe. Secret-keyed (cron secret), read-only.
- * Shows telegram config state and the latest outbox deliveries.
+ * Activity Sentinel — manual trigger + live status (secret-keyed, read-mostly).
+ *
+ *   ?key=<CRON_SECRET_KEY>&run=digest   send the digest now
+ *   ?key=<CRON_SECRET_KEY>              show live activity summary
  */
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/SiteSettings.php';
 require_once __DIR__ . '/../helpers/functions.php';
+require_once __DIR__ . '/../classes/ActivityDigest.php';
 require_once __DIR__ . '/../classes/TelegramNotifier.php';
 
 header('Content-Type: text/plain; charset=utf-8');
@@ -18,36 +21,43 @@ if ($secret === '' || !hash_equals($secret, $given)) {
     exit;
 }
 
-try {
-    $db = Database::getInstance();
-    echo "Telegram live: " . (TelegramNotifier::isLive() ? 'YES' : 'NO') . "\n";
-    echo "Events enabled: " . TelegramNotifier::enabledEvents() ? implode(',', TelegramNotifier::enabledEvents()) . "\n" : "\n";
-    echo "Digest hour: " . SiteSettings::get('telegram_digest_hour', '?') . " (daily)\n";
-    echo "Server time: " . date('Y-m-d H:i:s') . "\n\n";
+$db = Database::getInstance();
+$run = (string) ($_GET['run'] ?? '');
 
-    echo "Latest outbox deliveries:\n";
-    $rows = $db->query(
-        "SELECT id, event_type, status, created_at, sent_at
-         FROM telegram_outbox ORDER BY id DESC LIMIT 8"
-    );
-    foreach ($rows as $row) {
-        printf(
-            "  #%d %-16s %-9s created %s sent %s\n",
-            $row['id'], $row['event_type'], $row['status'],
-            substr((string) $row['created_at'], 5, 14), substr((string) $row['sent_at'], 5, 14)
-        );
-    }
+if ($run === 'digest') {
+    $id = ActivityDigest::send(3600, 'ACTIVITY DIGEST (manual test)');
+    echo "Digest #$id enqueued + sent → check Telegram.\n";
+    return;
+}
 
-    $hourly = $db->fetchOne(
-        "SELECT COUNT(*) AS n, MAX(sent_at) AS last FROM telegram_outbox
-         WHERE event_type = 'hourly_digest'"
+echo "Telegram live: " . (TelegramNotifier::isLive() ? 'YES' : 'NO') . "\n";
+echo "Server time: " . date('Y-m-d H:i:s') . " (Addis)\n\n";
+
+$today = date('Y-m-d');
+$t = $db->fetchOne(
+    "SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_token) AS visitors, COUNT(DISTINCT ip) AS ips
+     FROM analytics_events WHERE event_type = 'page_view' AND DATE(created_at) = ?",
+    [$today]
+);
+echo "TODAY  views: " . (int) $t['views'] . " · visitors: " . (int) $t['visitors']
+    . " · unique IPs: " . (int) $t['ips'] . "\n\n";
+
+echo "Last 10 events (newest first):\n";
+$rows = $db->query(
+    "SELECT event_type, path, ip, country, created_at
+     FROM analytics_events ORDER BY id DESC LIMIT 10"
+);
+foreach ($rows as $row) {
+    printf(
+        "  %-26s %s %s %s\n",
+        $row['event_type'],
+        substr((string) $row['path'], 0, 28),
+        ($row['ip'] ?: '-') . ($row['country'] ? ' (' . $row['country'] . ')' : ''),
+        substr((string) $row['created_at'], 5, 14)
     );
-    echo "\nHourly digests delivered so far: " . (int) ($hourly['n'] ?? 0);
-    if (!empty($hourly['last'])) {
-        echo " (last: " . substr((string) $hourly['last'], 5, 14) . ")";
-    }
-    echo "\n";
-} catch (Throwable $error) {
-    http_response_code(500);
-    echo "Status failed: " . $error->getMessage() . "\n";
+}
+
+echo "\nLatest Telegram deliveries:\n";
+foreach ($db->query("SELECT id, event_type, status, sent_at FROM telegram_outbox ORDER BY id DESC LIMIT 6") as $row) {
+    printf("  #%d %-16s %-9s %s\n", $row['id'], $row['event_type'], $row['status'], substr((string) $row['sent_at'], 5, 14));
 }
