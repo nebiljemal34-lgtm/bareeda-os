@@ -116,6 +116,10 @@ class ErpClient
             'checkCode'       => preg_match('/^[A-Z2-9]{4}-[A-Z2-9]{4}$/', $text($payload['checkCode'] ?? '')) === 1
                 ? $text($payload['checkCode'])
                 : '',
+            'sealed'          => !empty($payload['sealed']),
+            'keyId'           => preg_match('/^bk-[a-f0-9]{6}$/', $text($payload['keyId'] ?? '')) === 1
+                ? $text($payload['keyId'])
+                : '',
             'revokedAt'       => $text($payload['revokedAt'] ?? ''),
             'revokedReason'   => $text($payload['revokedReason'] ?? ''),
             'attachments'     => $attachments,

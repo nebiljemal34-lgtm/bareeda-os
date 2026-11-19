@@ -130,6 +130,17 @@ $copy = [
                                 <dd class="verify-checkcode"><?= sanitize($verify['checkCode']) ?></dd>
                             <?php endif; ?>
 
+                            <?php if (!empty($verify['sealed'])): ?>
+                                <dt>Security seal</dt>
+                                <dd>
+                                    Verified cryptographically
+                                    <?php if (($verify['keyId'] ?? '') !== ''): ?>
+                                        (key <?= sanitize($verify['keyId']) ?>)
+                                    <?php endif; ?>
+                                    <span class="verify-seal" aria-hidden="true">✓</span>
+                                </dd>
+                            <?php endif; ?>
+
                             <?php if ($verify['letter_date'] !== ''): ?>
                                 <dt>Letter date</dt>
                                 <dd><?= sanitize($verify['letter_date']) ?></dd>

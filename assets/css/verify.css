@@ -439,3 +439,9 @@
   letter-spacing: 0.08em;
   color: #00283f;
 }
+
+.verify-seal {
+  margin-left: 6px;
+  color: #1c7a3d;
+  font-weight: 700;
+}
