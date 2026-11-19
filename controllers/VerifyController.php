@@ -183,6 +183,17 @@ class VerifyController extends BaseController
             return;
         }
 
+        // Snapshot replication first: no factory connection at scan time.
+        $replicated = VerifyStore::find($token);
+        if ($replicated !== null) {
+            $result = $this->present($replicated['result'] ?? []);
+            $result['state'] = ($replicated['state'] ?? 'Active') === 'Revoked'
+                ? 'revoked'
+                : ($result['state'] ?? 'active');
+            $this->json($result, $result['state'] === 'unknown' ? 404 : 200);
+            return;
+        }
+
         $response = (new ErpClient())->verification($token);
 
         if ($response['ok']) {
