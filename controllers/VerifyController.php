@@ -207,6 +207,7 @@ class VerifyController extends BaseController
         return [
             'state'          => $result['state'],
             'reference'      => $result['reference'],
+            'checkCode'      => $result['checkCode'] ?? '',
             'letter_date'    => $this->formatDate($result['date']),
             'subject'        => $result['subject'],
             'issued_to'      => $result['organisation'],
@@ -223,6 +224,7 @@ class VerifyController extends BaseController
         return [
             'state'          => $state,
             'reference'      => '',
+            'checkCode'      => '',
             'date'           => '',
             'subject'        => '',
             'organisation'   => '',

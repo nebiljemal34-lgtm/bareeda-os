@@ -430,3 +430,12 @@
     display: none;
   }
 }
+
+/* Anti-phishing check code: printed beside the QR on the letter, echoed here. */
+.verify-checkcode {
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #00283f;
+}

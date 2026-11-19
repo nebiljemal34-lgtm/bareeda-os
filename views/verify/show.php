@@ -125,6 +125,11 @@ $copy = [
                                 <dd><?= sanitize($verify['reference']) ?></dd>
                             <?php endif; ?>
 
+                            <?php if (($verify['checkCode'] ?? '') !== ''): ?>
+                                <dt>Check code</dt>
+                                <dd class="verify-checkcode"><?= sanitize($verify['checkCode']) ?></dd>
+                            <?php endif; ?>
+
                             <?php if ($verify['letter_date'] !== ''): ?>
                                 <dt>Letter date</dt>
                                 <dd><?= sanitize($verify['letter_date']) ?></dd>

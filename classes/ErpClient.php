@@ -111,6 +111,11 @@ class ErpClient
             'correspondent'   => $text($payload['correspondent'] ?? ''),
             'signatoryTitle'  => $text($payload['signatoryTitle'] ?? ''),
             'issuedAt'        => $text($payload['issuedAt'] ?? ''),
+            // Anti-phishing code derived from the ERP-held snapshot; the
+            // customer compares it with the code printed beside the QR.
+            'checkCode'       => preg_match('/^[A-Z2-9]{4}-[A-Z2-9]{4}$/', $text($payload['checkCode'] ?? '')) === 1
+                ? $text($payload['checkCode'])
+                : '',
             'revokedAt'       => $text($payload['revokedAt'] ?? ''),
             'revokedReason'   => $text($payload['revokedReason'] ?? ''),
             'attachments'     => $attachments,
