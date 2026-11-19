@@ -46,7 +46,7 @@ class VerifyController extends BaseController
         header('Cache-Control: no-store, max-age=0');
         header('Referrer-Policy: no-referrer');
         header('X-Content-Type-Options: nosniff');
-        header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
+        header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'");
 
         $token = $this->resolveToken($token);
 
@@ -159,7 +159,7 @@ class VerifyController extends BaseController
         header('Cache-Control: no-store');
         header('Referrer-Policy: no-referrer');
         header('X-Content-Type-Options: nosniff');
-        header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
+        header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'");
 
         $ip = RateLimit::clientIp();
         if (!$this->throttle('ingest:' . $ip, self::INGEST_LIMIT)) {
@@ -216,7 +216,7 @@ class VerifyController extends BaseController
         header('Cache-Control: no-store, max-age=0');
         header('Referrer-Policy: no-referrer');
         header('X-Content-Type-Options: nosniff');
-        header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
+        header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'");
 
         $token = $this->resolveToken($token);
 
