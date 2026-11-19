@@ -177,7 +177,14 @@ $copy = [
                             <?php endif; ?>
                         </dl>
 
-                        <?php if (!empty($verify['attachments'])): ?>
+                        <?php if (!empty($verify['withheld'])): ?>
+                            <section class="verify-encl">
+                                <h2>Contents</h2>
+                                <p>This letter is genuine, but its contents are confidential.
+                                The details are withheld from the public page on purpose —
+                                contact us to confirm specifics.</p>
+                            </section>
+                        <?php elseif (!empty($verify['attachments'])): ?>
                             <section class="verify-encl">
                                 <h2>Documents enclosed</h2>
                                 <ul>

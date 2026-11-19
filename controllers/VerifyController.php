@@ -22,6 +22,9 @@ class VerifyController extends BaseController
     {
         header('X-Robots-Tag: noindex, nofollow');
         header('Cache-Control: no-store, max-age=0');
+        header('Referrer-Policy: no-referrer');
+        header('X-Content-Type-Options: nosniff');
+        header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
 
         $token = $this->resolveToken($token);
 
@@ -109,6 +112,9 @@ class VerifyController extends BaseController
     {
         header('X-Robots-Tag: noindex, nofollow');
         header('Cache-Control: no-store, max-age=0');
+        header('Referrer-Policy: no-referrer');
+        header('X-Content-Type-Options: nosniff');
+        header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
 
         $token = $this->resolveToken($token);
 
@@ -208,6 +214,7 @@ class VerifyController extends BaseController
             'state'          => $result['state'],
             'reference'      => $result['reference'],
             'checkCode'      => $result['checkCode'] ?? '',
+            'withheld'       => !empty($result['detailsWithheld']),
             'sealed'         => !empty($result['sealed']),
             'keyId'          => $result['keyId'] ?? '',
             'letter_date'    => $this->formatDate($result['date']),
@@ -227,6 +234,7 @@ class VerifyController extends BaseController
             'state'          => $state,
             'reference'      => '',
             'checkCode'      => '',
+            'withheld'       => false,
             'sealed'         => false,
             'keyId'          => '',
             'date'           => '',
