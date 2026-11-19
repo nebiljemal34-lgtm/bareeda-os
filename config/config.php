@@ -64,7 +64,16 @@ define('ERP_API_BASE_URL', rtrim(getenv('ERP_API_BASE_URL') ?: 'https://verify.b
 // Snapshot replication: shared secret between the factory ERP and this
 // site. The ERP pushes each letter's frozen public payload to
 // POST /api/verify/ingest with this in the X-Ingest-Secret header.
-define('ERP_INGEST_SECRET', getenv('ERP_INGEST_SECRET') ?: '');
+// Optional uncommitted local overrides (config/local-overrides.php) may
+// define ERP_INGEST_SECRET and similar environment-specific values; they are
+// required before the defaults so the override wins. Never commit secrets.
+if (is_file(__DIR__ . '/local-overrides.php')) {
+    require __DIR__ . '/local-overrides.php';
+}
+
+if (!defined('ERP_INGEST_SECRET')) {
+    define('ERP_INGEST_SECRET', getenv('ERP_INGEST_SECRET') ?: '');
+}
 
 // ─── Currency / Locale ─────────────────────────────────────
 define('CURRENCY_CODE', 'ETB');

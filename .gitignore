@@ -2,3 +2,4 @@ logs/*
 uploads/products/*
 .DS_Store
 Thumbs.db
+config/local-overrides.php
