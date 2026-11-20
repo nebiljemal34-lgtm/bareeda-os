@@ -201,17 +201,17 @@ class TelegramNotifier
             "SELECT COUNT(DISTINCT visitor_token) AS visitors,
                     COALESCE(SUM(event_type = 'page_view'), 0) AS page_views,
                     COALESCE(SUM(event_type = 'qr_scan'), 0) AS qr_scans
-             FROM analytics_events WHERE DATE(created_at) = ?",
+             FROM analytics_events WHERE DATE(created_at + INTERVAL 3 HOUR) = ?",
             [$day]
         );
         $orders = $db->fetchOne(
             "SELECT COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
-             FROM orders WHERE DATE(created_at) = ? AND status <> 'cancelled'",
+             FROM orders WHERE DATE(created_at + INTERVAL 3 HOUR) = ? AND status <> 'cancelled'",
             [$day]
         );
         $pages = $db->query(
             "SELECT path, COUNT(*) AS views FROM analytics_events
-             WHERE event_type = 'page_view' AND DATE(created_at) = ?
+             WHERE event_type = 'page_view' AND DATE(created_at + INTERVAL 3 HOUR) = ?
              GROUP BY path ORDER BY views DESC, path ASC LIMIT 5",
             [$day]
         );

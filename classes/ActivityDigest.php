@@ -20,7 +20,9 @@ class ActivityDigest
     public static function send(int $windowSeconds = 3600, string $title = 'HOURLY ACTIVITY DIGEST'): int
     {
         $db    = Database::getInstance();
-        $since = date('Y-m-d H:i:s', time() - $windowSeconds);
+        // MySQL stores created_at in UTC while PHP runs on Addis time; compare
+        // UTC to UTC or every window lands three hours in the future.
+        $since = gmdate('Y-m-d H:i:s', time() - $windowSeconds);
 
         $traffic = $db->fetchOne(
             "SELECT COUNT(*) AS page_views,

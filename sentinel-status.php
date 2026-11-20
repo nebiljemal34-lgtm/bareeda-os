@@ -33,11 +33,10 @@ if ($run === 'digest') {
 echo "Telegram live: " . (TelegramNotifier::isLive() ? 'YES' : 'NO') . "\n";
 echo "Server time: " . date('Y-m-d H:i:s') . " (Addis)\n\n";
 
-$today = date('Y-m-d');
+
 $t = $db->fetchOne(
     "SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_token) AS visitors, COUNT(DISTINCT ip) AS ips
-     FROM analytics_events WHERE event_type = 'page_view' AND DATE(created_at) = ?",
-    [$today]
+     FROM analytics_events WHERE event_type = 'page_view' AND DATE(created_at + INTERVAL 3 HOUR) = DATE(UTC_TIMESTAMP() + INTERVAL 3 HOUR)"
 );
 echo "TODAY  views: " . (int) $t['views'] . " · visitors: " . (int) $t['visitors']
     . " · unique IPs: " . (int) $t['ips'] . "\n\n";
