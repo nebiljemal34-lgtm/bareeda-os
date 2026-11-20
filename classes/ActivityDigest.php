@@ -9,6 +9,7 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/functions.php';
+require_once __DIR__ . '/Analytics.php';
 require_once __DIR__ . '/TelegramNotifier.php';
 
 class ActivityDigest
@@ -24,14 +25,8 @@ class ActivityDigest
         // UTC to UTC or every window lands three hours in the future.
         $since = gmdate('Y-m-d H:i:s', time() - $windowSeconds);
 
-        $traffic = $db->fetchOne(
-            "SELECT COUNT(*) AS page_views,
-                    COUNT(DISTINCT visitor_token) AS visitors,
-                    COUNT(DISTINCT ip) AS unique_ips
-             FROM analytics_events
-             WHERE event_type = 'page_view' AND created_at >= ?",
-            [$since]
-        );
+        $breakdown = Analytics::pageViewBreakdown($since);
+        $traffic   = $breakdown['totals'];
         $counts = $db->fetchOne(
             "SELECT
                 COALESCE(SUM(event_type = 'cart_add'), 0)     AS cart_adds,
@@ -46,13 +41,8 @@ class ActivityDigest
              FROM orders WHERE created_at >= ? AND status <> 'cancelled'",
             [$since]
         );
-        $topPages = $db->query(
-            "SELECT path, COUNT(*) AS views
-             FROM analytics_events
-             WHERE event_type = 'page_view' AND created_at >= ?
-             GROUP BY path ORDER BY views DESC LIMIT 5",
-            [$since]
-        );
+        $topPages = $breakdown['top_pages'];
+        $ipFlags  = $breakdown['ip_flags'] ?? [];
         $newIps = $db->query(
             "SELECT ip, country, MIN(created_at) AS first_seen
              FROM analytics_events
@@ -76,6 +66,24 @@ class ActivityDigest
         $lines[] = '👁 Page views: ' . (int) ($traffic['page_views'] ?? 0)
             . ' · Visitors: ' . (int) ($traffic['visitors'] ?? 0)
             . ' · Unique IPs: ' . (int) ($traffic['unique_ips'] ?? 0);
+
+        // Traffic that was kept out of the headline numbers. Shown, not hidden:
+        // a wave of scanner hits is itself useful information.
+        $filtered = [];
+        $botHits = (int) ($traffic['bot_hits'] ?? 0);
+        if ($botHits > 0) {
+            $filtered[] = '🤖 ' . $botHits . ' bot hit' . ($botHits === 1 ? '' : 's')
+                . ' (' . (int) $traffic['bot_ips'] . ' IP' . ((int) $traffic['bot_ips'] === 1 ? '' : 's') . ')';
+        }
+        $unverified = (int) ($traffic['unverified'] ?? 0);
+        if ($unverified > 0) {
+            $filtered[] = '🌍 ' . $unverified . ' unverified foreign hit' . ($unverified === 1 ? '' : 's')
+                . ' (' . (int) $traffic['unverified_ips'] . ' IP' . ((int) $traffic['unverified_ips'] === 1 ? '' : 's') . ')';
+        }
+        if ($filtered) {
+            $lines[] = 'Filtered: ' . implode(' · ', $filtered);
+        }
+
         $lines[] = '🛒 Orders: ' . (int) ($orders['orders'] ?? 0)
             . ' · Revenue: ' . number_format((float) ($orders['revenue'] ?? 0), 2) . ' ETB';
         $lines[] = '➕ Cart adds: ' . (int) ($counts['cart_adds'] ?? 0)
@@ -96,7 +104,9 @@ class ActivityDigest
             $lines[] = '<b>New IP addresses</b>';
             foreach ($newIps as $row) {
                 $country = (string) ($row['country'] ?? '') !== '' ? ' (' . $row['country'] . ')' : '';
-                $lines[] = '• ' . $e($row['ip']) . $country . ' — ' . date('H:i', strtotime((string) $row['first_seen'] . ' UTC')) . ' (Addis)';
+                $flag = $ipFlags[(string) $row['ip']] ?? '';
+                $note = $flag === 'bot' ? ' · 🤖 bot' : ($flag === 'unverified' ? ' · 🌍 unverified' : '');
+                $lines[] = '• ' . $e($row['ip']) . $country . ' — ' . date('H:i', strtotime((string) $row['first_seen'] . ' UTC')) . ' (Addis)' . $note;
             }
         } else {
             $lines[] = '';

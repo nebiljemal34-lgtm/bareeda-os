@@ -4,6 +4,41 @@ class Analytics
 {
     private const COOKIE_NAME = 'bareeda_visitor';
 
+    /**
+     * User agents that are never a human browsing the shop. Shared by the
+     * admin dashboard, the Activity Sentinel digest and the daily digest so
+     * the three never disagree.
+     */
+    public const BOT_UA_REGEX = 'bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|lighthouse|python-requests|python-urllib|curl/|wget|go-http|java/|okhttp|scrapy|axios|node-fetch';
+
+    /**
+     * Reverse-DNS suffixes that mean "this is a server, not a customer".
+     * Scanners often send a normal browser user agent, so the user-agent
+     * check alone still counts them as visitors; the PTR lookup catches
+     * cloud/VPS hosts (Tencent, Ace Data Centers, AWS, Hetzner…).
+     */
+    private const HOSTING_PTR_SUFFIXES = [
+        'acedatacenter.com', 'amazonaws.com', 'compute.amazonaws.com',
+        'azure.com', 'cloudapp.net', 'digitalocean.com', 'contabo.net',
+        'contabo.com', 'hetzner.com', 'your-server.de', 'linode.com',
+        'linodeusercontent.com', 'ovh.net', 'vultr.com', 'vultrusercontent.com',
+        'tencentcloud', 'aliyun.com', 'alibabacloud.com', 'googleusercontent.com',
+        'googlecloud', 'oraclecloud.com', 'choopa.com', 'colocrossing.com',
+        'hostinger.com', 'ionos.com', 'leaseweb.com', 'psychz.net',
+        'scaleway.com', 'upcloud.com', 'servarica.com', 'serverhub.com',
+        'quadranet.com', 'sharktech.net', 'hostwinds.com', 'racknerd.com',
+        'wholesaleinternet.net', 'greencloudvps.com',
+    ];
+
+    private const PTR_CACHE_TTL    = 2592000; // 30 days
+    private const PTR_CACHE_MAX    = 1000;
+    private const PTR_LOOKUP_BUDGET = 40;     // per request / digest run
+
+    /** @var array{file:string,entries:array}|null */
+    private static $ptrCache = null;
+    private static $ptrLookups = 0;
+    private static $ptrDeadline = null;
+
     public static function trackPageView(): void
     {
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET' || !self::enabled()) {
@@ -211,5 +246,206 @@ class Analytics
     {
         $days = max(1, min(365, $days));
         return (new DateTimeImmutable('today'))->modify('-' . ($days - 1) . ' days')->format('Y-m-d 00:00:00');
+    }
+
+    // ─── Bot / scanner classification ──────────────────────────
+
+    public static function isBotUserAgent(string $userAgent): bool
+    {
+        return $userAgent !== ''
+            && preg_match('#' . self::BOT_UA_REGEX . '#i', $userAgent) === 1;
+    }
+
+    /** True when the IP reverse-resolves to a known hosting/VPS provider. */
+    public static function isHostingIp(string $ip): bool
+    {
+        $host = self::hostOf($ip);
+        if ($host === '') {
+            return false;
+        }
+        foreach (self::HOSTING_PTR_SUFFIXES as $suffix) {
+            if (str_ends_with($host, $suffix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Page views split into real / bot / unverified-foreign buckets.
+     *
+     * - bot:          bot user agent OR reverse DNS says hosting provider.
+     * - unverified:   non-Ethiopian IP with a single page view in the window
+     *                 (the classic "one hit on / then gone" scanner pattern).
+     *                 Kept separate instead of silently deleted, so the
+     *                 digest stays honest.
+     *
+     * @param string      $sinceUtc inclusive, MySQL UTC datetime
+     * @param string|null $untilUtc exclusive, MySQL UTC datetime
+     */
+    public static function pageViewBreakdown(string $sinceUtc, ?string $untilUtc = null): array
+    {
+        $sql = "SELECT path, ip, country, user_agent, visitor_token
+                FROM analytics_events
+                WHERE event_type = 'page_view' AND created_at >= ?";
+        $params = [$sinceUtc];
+        if ($untilUtc !== null) {
+            $sql .= ' AND created_at < ?';
+            $params[] = $untilUtc;
+        }
+        $sql .= ' ORDER BY created_at ASC LIMIT 50000';
+
+        $rows = Database::getInstance()->query($sql, $params);
+
+        $viewsPerIp = [];
+        foreach ($rows as $row) {
+            $ip = (string) $row['ip'];
+            if ($ip !== '') {
+                $viewsPerIp[$ip] = ($viewsPerIp[$ip] ?? 0) + 1;
+            }
+        }
+
+        $botHits = 0;
+        $unverified = 0;
+        $confirmedTokens = [];
+        $confirmedIps = [];
+        $botIps = [];
+        $unverifiedIps = [];
+        $paths = [];
+        $flags = [];
+
+        foreach ($rows as $row) {
+            $ip      = (string) $row['ip'];
+            $country = strtoupper((string) ($row['country'] ?? ''));
+            $isBot   = self::isBotUserAgent((string) ($row['user_agent'] ?? ''))
+                || ($ip !== '' && self::isHostingIp($ip));
+
+            if ($isBot) {
+                $botHits++;
+                if ($ip !== '') {
+                    $botIps[$ip] = true;
+                    $flags[$ip] = 'bot';
+                }
+                continue;
+            }
+
+            // No IP, or a non-Ethiopian IP that appeared exactly once: keep it
+            // out of the headline numbers but report it separately.
+            $isUnverified = $country !== 'ET'
+                && ($ip === '' || ($viewsPerIp[$ip] ?? 0) <= 1);
+            if ($isUnverified) {
+                $unverified++;
+                if ($ip !== '') {
+                    $unverifiedIps[$ip] = true;
+                    $flags[$ip] = 'unverified';
+                }
+                continue;
+            }
+
+            $confirmedTokens[(string) $row['visitor_token']] = true;
+            if ($ip !== '') {
+                $confirmedIps[$ip] = true;
+            }
+            $path = (string) $row['path'];
+            $paths[$path] = ($paths[$path] ?? 0) + 1;
+        }
+
+        arsort($paths);
+        $topPages = [];
+        foreach ($paths as $path => $views) {
+            $topPages[] = ['path' => $path, 'views' => $views];
+            if (count($topPages) >= 5) {
+                break;
+            }
+        }
+
+        return [
+            'totals' => [
+                'page_views'    => count($rows) - $botHits - $unverified,
+                'visitors'      => count($confirmedTokens),
+                'unique_ips'    => count($confirmedIps),
+                'bot_hits'      => $botHits,
+                'bot_ips'       => count($botIps),
+                'unverified'    => $unverified,
+                'unverified_ips' => count($unverifiedIps),
+            ],
+            'top_pages' => $topPages,
+            'ip_flags'  => $flags,
+        ];
+    }
+
+    /** Reverse DNS with an on-disk cache (digest runs are hourly, not hot). */
+    private static function hostOf(string $ip): string
+    {
+        if ($ip === ''
+            || filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false
+            || filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            return '';
+        }
+
+        $cache = self::ptrCache();
+        if (array_key_exists($ip, $cache['entries'])) {
+            return (string) ($cache['entries'][$ip]['host'] ?? '');
+        }
+        if (self::$ptrLookups >= self::PTR_LOOKUP_BUDGET) {
+            return '';
+        }
+        // A slow resolver must never stall a digest or an admin page.
+        if (self::$ptrDeadline === null) {
+            self::$ptrDeadline = microtime(true) + 3.0;
+        }
+        if (microtime(true) >= self::$ptrDeadline) {
+            return '';
+        }
+        self::$ptrLookups++;
+
+        $host = @gethostbyaddr($ip);
+        $host = is_string($host) && $host !== $ip ? strtolower($host) : '';
+        self::ptrRemember($ip, $host);
+        return $host;
+    }
+
+    private static function ptrCache(): array
+    {
+        if (self::$ptrCache !== null) {
+            return self::$ptrCache;
+        }
+        $file = BASE_PATH . 'storage/ip-ptr-cache.json';
+        $raw = is_file($file) ? @file_get_contents($file) : '';
+        $data = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
+
+        $entries = [];
+        if (is_array($data)) {
+            $cutoff = time() - self::PTR_CACHE_TTL;
+            foreach ($data as $ip => $entry) {
+                if (is_array($entry) && (int) ($entry['at'] ?? 0) >= $cutoff) {
+                    $entries[(string) $ip] = $entry;
+                }
+            }
+        }
+
+        self::$ptrCache = ['file' => $file, 'entries' => $entries];
+        return self::$ptrCache;
+    }
+
+    private static function ptrRemember(string $ip, string $host): void
+    {
+        $cache = self::ptrCache();
+        $cache['entries'][$ip] = ['host' => $host, 'at' => time()];
+        if (count($cache['entries']) > self::PTR_CACHE_MAX) {
+            uasort($cache['entries'], fn($a, $b) => ((int) ($b['at'] ?? 0)) <=> ((int) ($a['at'] ?? 0)));
+            $cache['entries'] = array_slice($cache['entries'], 0, self::PTR_CACHE_MAX, true);
+        }
+        self::$ptrCache = $cache;
+
+        $dir = dirname($cache['file']);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        @file_put_contents(
+            $cache['file'],
+            json_encode($cache['entries'], JSON_UNESCAPED_SLASHES),
+            LOCK_EX
+        );
     }
 }

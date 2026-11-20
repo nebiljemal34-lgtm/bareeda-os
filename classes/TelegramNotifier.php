@@ -7,6 +7,8 @@
  * delivery AND a valid bot token + chat ID are saved.
  */
 
+require_once __DIR__ . '/Analytics.php';
+
 class TelegramNotifier
 {
     public const EVENTS = [
@@ -197,10 +199,13 @@ class TelegramNotifier
     public static function digestData(string $day): array
     {
         $db = Database::getInstance();
-        $traffic = $db->fetchOne(
-            "SELECT COUNT(DISTINCT visitor_token) AS visitors,
-                    COALESCE(SUM(event_type = 'page_view'), 0) AS page_views,
-                    COALESCE(SUM(event_type = 'qr_scan'), 0) AS qr_scans
+
+        // $day is an Addis calendar day; the DB stores UTC.
+        $since = gmdate('Y-m-d H:i:s', strtotime($day . ' 00:00:00'));
+        $until = gmdate('Y-m-d H:i:s', strtotime($day . ' 00:00:00 +1 day'));
+        $traffic = Analytics::pageViewBreakdown($since, $until);
+        $qr = $db->fetchOne(
+            "SELECT COALESCE(SUM(event_type = 'qr_scan'), 0) AS qr_scans
              FROM analytics_events WHERE DATE(created_at + INTERVAL 3 HOUR) = ?",
             [$day]
         );
@@ -209,21 +214,17 @@ class TelegramNotifier
              FROM orders WHERE DATE(created_at + INTERVAL 3 HOUR) = ? AND status <> 'cancelled'",
             [$day]
         );
-        $pages = $db->query(
-            "SELECT path, COUNT(*) AS views FROM analytics_events
-             WHERE event_type = 'page_view' AND DATE(created_at + INTERVAL 3 HOUR) = ?
-             GROUP BY path ORDER BY views DESC, path ASC LIMIT 5",
-            [$day]
-        );
 
         return [
             'day'        => $day,
-            'visitors'   => (int) ($traffic['visitors'] ?? 0),
-            'page_views' => (int) ($traffic['page_views'] ?? 0),
-            'qr_scans'   => (int) ($traffic['qr_scans'] ?? 0),
+            'visitors'   => (int) ($traffic['totals']['visitors'] ?? 0),
+            'page_views' => (int) ($traffic['totals']['page_views'] ?? 0),
+            'bot_hits'   => (int) ($traffic['totals']['bot_hits'] ?? 0),
+            'unverified' => (int) ($traffic['totals']['unverified'] ?? 0),
+            'qr_scans'   => (int) ($qr['qr_scans'] ?? 0),
             'orders'     => (int) ($orders['orders'] ?? 0),
             'revenue'    => (float) ($orders['revenue'] ?? 0),
-            'pages'      => $pages,
+            'pages'      => $traffic['top_pages'] ?? [],
         ];
     }
 
@@ -313,8 +314,12 @@ class TelegramNotifier
             case 'daily_digest':
                 $msg = '<b>DAILY ACTIVITY - ' . $e($data['day']) . "</b>\n"
                     . 'Visitors: ' . (int) $data['visitors'] . "\n"
-                    . 'Page views: ' . (int) $data['page_views'] . "\n"
-                    . 'QR scans: ' . (int) $data['qr_scans'] . "\n"
+                    . 'Page views: ' . (int) $data['page_views'] . "\n";
+                if ((int) ($data['bot_hits'] ?? 0) > 0 || (int) ($data['unverified'] ?? 0) > 0) {
+                    $msg .= 'Filtered: 🤖 ' . (int) ($data['bot_hits'] ?? 0) . ' bot'
+                        . ' · 🌍 ' . (int) ($data['unverified'] ?? 0) . " unverified\n";
+                }
+                $msg .= 'QR scans: ' . (int) $data['qr_scans'] . "\n"
                     . 'Orders: ' . (int) $data['orders'] . "\n"
                     . 'Revenue: ' . $e(formatPrice((float) $data['revenue'])) . "\n\n"
                     . "<b>Most viewed pages</b>\n";

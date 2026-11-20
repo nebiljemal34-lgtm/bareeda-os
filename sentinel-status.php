@@ -9,6 +9,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/SiteSettings.php';
 require_once __DIR__ . '/../helpers/functions.php';
+require_once __DIR__ . '/../classes/Analytics.php';
 require_once __DIR__ . '/../classes/ActivityDigest.php';
 require_once __DIR__ . '/../classes/TelegramNotifier.php';
 
@@ -25,7 +26,10 @@ $db = Database::getInstance();
 $run = (string) ($_GET['run'] ?? '');
 
 if ($run === 'digest') {
-    $id = ActivityDigest::send(3600, 'ACTIVITY DIGEST (manual test)');
+    // The cPanel cron calls this endpoint, so the default title is the real
+    // one. Add &test=1 to label a hand-run digest as a manual test.
+    $title = isset($_GET['test']) ? 'ACTIVITY DIGEST (manual test)' : 'HOURLY ACTIVITY DIGEST';
+    $id = ActivityDigest::send(3600, $title);
     echo "Digest #$id enqueued + sent → check Telegram.\n";
     return;
 }
@@ -34,12 +38,12 @@ echo "Telegram live: " . (TelegramNotifier::isLive() ? 'YES' : 'NO') . "\n";
 echo "Server time: " . date('Y-m-d H:i:s') . " (Addis)\n\n";
 
 
-$t = $db->fetchOne(
-    "SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_token) AS visitors, COUNT(DISTINCT ip) AS ips
-     FROM analytics_events WHERE event_type = 'page_view' AND DATE(created_at + INTERVAL 3 HOUR) = DATE(UTC_TIMESTAMP() + INTERVAL 3 HOUR)"
-);
-echo "TODAY  views: " . (int) $t['views'] . " · visitors: " . (int) $t['visitors']
-    . " · unique IPs: " . (int) $t['ips'] . "\n\n";
+$stats = Analytics::pageViewBreakdown(gmdate('Y-m-d H:i:s', strtotime('today')));
+$t = $stats['totals'];
+echo "TODAY  views: " . (int) $t['page_views'] . " · visitors: " . (int) $t['visitors']
+    . " · unique IPs: " . (int) $t['unique_ips'] . "\n";
+echo "       filtered: 🤖 " . (int) $t['bot_hits'] . " bot · 🌍 " . (int) $t['unverified']
+    . " unverified foreign\n\n";
 
 echo "Last 10 events (newest first):\n";
 $rows = $db->query(
@@ -56,7 +60,10 @@ foreach ($rows as $row) {
     );
 }
 
-echo "\nLatest Telegram deliveries:\n";
+echo "\nLatest Telegram deliveries (Addis time):\n";
 foreach ($db->query("SELECT id, event_type, status, sent_at FROM telegram_outbox ORDER BY id DESC LIMIT 6") as $row) {
-    printf("  #%d %-16s %-9s %s\n", $row['id'], $row['event_type'], $row['status'], substr((string) $row['sent_at'], 5, 14));
+    $sent = (string) ($row['sent_at'] ?? '');
+    // sent_at is MySQL UTC; render it the same way as everything else here.
+    $sentLabel = $sent !== '' ? date('m-d H:i', strtotime($sent . ' UTC')) : '—';
+    printf("  #%d %-16s %-9s %s\n", (int) $row['id'], $row['event_type'], $row['status'], $sentLabel);
 }
