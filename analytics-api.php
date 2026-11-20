@@ -185,7 +185,12 @@ try {
     // ── summary ────────────────────────────────────────────────
     // Same classifier as the Telegram digest: bot user agent, hosting-provider
     // reverse DNS and single-hit foreign IPs never reach the headline numbers.
-    $breakdown = Analytics::pageViewBreakdown($since, null, 8);
+    $granularity = match ($range) {
+        '1h'  => '5min',
+        '7d'  => 'day',
+        default => 'hour',
+    };
+    $breakdown = Analytics::pageViewBreakdown($since, null, 8, $granularity);
     $totals    = $breakdown['totals'];
     $topPages  = $breakdown['top_pages'];
 
@@ -220,12 +225,30 @@ try {
         [$since]
     );
 
-    // Hourly series (Addis hours), confirmed traffic only.
+    // Series with every bucket present, so the chart spans the full window
+    // even when nothing happened in some hours/days.
+    $step  = $granularity === '5min' ? 300 : ($granularity === 'day' ? 86400 : 3600);
+    $count = $granularity === '5min' ? 12 : ($granularity === 'day' ? 7 : 24);
+    $anchor = $granularity === 'day'
+        ? strtotime('today')
+        : time() - (time() % $step);
+    $byBucket = [];
+    foreach ($breakdown['series'] as $entry) {
+        $byBucket[(string) $entry['bucket']] = $entry;
+    }
     $series = [];
-    foreach ($breakdown['series'] as $bucket) {
+    for ($i = $count - 1; $i >= 0; $i--) {
+        $ts  = $anchor - ($i * $step);
+        $key = date($granularity === 'day' ? 'Y-m-d' : 'Y-m-d H:i', $ts);
+        $row = $byBucket[$key] ?? null;
+        $label = $row['label'] ?? date($granularity === 'day' ? 'M j' : 'H:i', $ts);
         $series[] = [
-            'hour'  => substr((string) $bucket['hour'], 11, 5),
-            'views' => (int) $bucket['views'],
+            'hour'       => $label,
+            'label'      => $label,
+            'bucket'     => $key,
+            'views'      => (int) ($row['views'] ?? 0),
+            'bots'       => (int) ($row['bots'] ?? 0),
+            'unverified' => (int) ($row['unverified'] ?? 0),
         ];
     }
 

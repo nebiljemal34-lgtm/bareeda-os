@@ -283,7 +283,7 @@ class Analytics
      * @param string      $sinceUtc inclusive, MySQL UTC datetime
      * @param string|null $untilUtc exclusive, MySQL UTC datetime
      */
-    public static function pageViewBreakdown(string $sinceUtc, ?string $untilUtc = null, int $topLimit = 5): array
+    public static function pageViewBreakdown(string $sinceUtc, ?string $untilUtc = null, int $topLimit = 5, string $granularity = 'hour'): array
     {
         $sql = "SELECT path, ip, country, user_agent, visitor_token, referrer, created_at
                 FROM analytics_events
@@ -321,6 +321,7 @@ class Analytics
         foreach ($rows as $row) {
             $ip      = (string) $row['ip'];
             $country = strtoupper((string) ($row['country'] ?? ''));
+            $createdUtc = (string) ($row['created_at'] ?? '');
             $isBot   = self::isBotUserAgent((string) ($row['user_agent'] ?? ''))
                 || ($ip !== '' && self::isHostingIp($ip));
 
@@ -330,6 +331,7 @@ class Analytics
                     $botIps[$ip] = true;
                     $flags[$ip] = 'bot';
                 }
+                self::bumpSeries($series, $createdUtc, $granularity, 'bots');
                 continue;
             }
 
@@ -343,6 +345,7 @@ class Analytics
                     $unverifiedIps[$ip] = true;
                     $flags[$ip] = 'unverified';
                 }
+                self::bumpSeries($series, $createdUtc, $granularity, 'unverified');
                 continue;
             }
 
@@ -354,11 +357,7 @@ class Analytics
             $paths[$path] = ($paths[$path] ?? 0) + 1;
             $pathTokens[$path][(string) $row['visitor_token']] = true;
 
-            $createdUtc = (string) ($row['created_at'] ?? '');
-            if ($createdUtc !== '') {
-                $hour = date('Y-m-d H:00', strtotime($createdUtc . ' UTC'));
-                $series[$hour] = ($series[$hour] ?? 0) + 1;
-            }
+            self::bumpSeries($series, $createdUtc, $granularity, 'views');
             $referrer = (string) ($row['referrer'] ?? '');
             $sources[$referrer] = ($sources[$referrer] ?? 0) + 1;
             $devices[self::deviceClass((string) ($row['user_agent'] ?? ''))]++;
@@ -378,10 +377,8 @@ class Analytics
         }
 
         ksort($series);
-        $seriesOut = [];
-        foreach ($series as $hour => $views) {
-            $seriesOut[] = ['hour' => $hour, 'views' => $views];
-        }
+        $seriesOut = array_values($series);
+        usort($seriesOut, fn($a, $b) => ((int) ($a['ts'] ?? 0)) <=> ((int) ($b['ts'] ?? 0)));
         arsort($sources);
 
         return [
@@ -412,6 +409,48 @@ class Analytics
             return 'mobile';
         }
         return 'desktop';
+    }
+
+    /**
+     * Time bucket for the dashboard chart. Bucket boundaries use Addis wall
+     * time (the DB is UTC, PHP runs on Addis time).
+     *
+     * @return array{0:string,1:string,2:int} [key, label, unix timestamp]
+     */
+    private static function bucketFor(string $createdUtc, string $granularity): array
+    {
+        $ts = strtotime($createdUtc . ' UTC');
+        if ($ts === false) {
+            return ['', '', 0];
+        }
+        if ($granularity === 'day') {
+            return [date('Y-m-d', $ts), date('M j', $ts), $ts];
+        }
+        $step = $granularity === '5min' ? 300 : 3600;
+        $ts -= $ts % $step;
+        return [date('Y-m-d H:i', $ts), date('H:i', $ts), $ts];
+    }
+
+    private static function bumpSeries(array &$series, string $createdUtc, string $granularity, string $field): void
+    {
+        if ($createdUtc === '' || !in_array($field, ['views', 'bots', 'unverified'], true)) {
+            return;
+        }
+        [$key, $label, $ts] = self::bucketFor($createdUtc, $granularity);
+        if ($key === '') {
+            return;
+        }
+        if (!isset($series[$key])) {
+            $series[$key] = [
+                'bucket'     => $key,
+                'label'      => $label,
+                'ts'         => $ts,
+                'views'      => 0,
+                'bots'       => 0,
+                'unverified' => 0,
+            ];
+        }
+        $series[$key][$field]++;
     }
 
     /** Reverse DNS with an on-disk cache (digest runs are hourly, not hot). */
