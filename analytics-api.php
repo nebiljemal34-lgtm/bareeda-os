@@ -15,6 +15,7 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/functions.php';
+require_once __DIR__ . '/../classes/Analytics.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -44,13 +45,19 @@ $seconds = match ($range) {
 // UTC boundary — MySQL created_at is UTC while PHP runs on Addis time.
 $since = gmdate('Y-m-d H:i:s', time() - $seconds);
 
-/** Bot classification — kept out of the headline numbers. */
-function is_bot_ua(string $ua): bool
+/** IP -> page views in the window, for the single-hit scanner heuristic. */
+function views_per_ip($db, string $since): array
 {
-    return preg_match(
-        '/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|lighthouse|python-requests|python-urllib|curl\/|wget|go-http|java\/|okhttp|scrapy|axios|node-fetch/i',
-        $ua
-    ) === 1;
+    $map = [];
+    foreach ($db->query(
+        "SELECT ip, COUNT(*) AS n FROM analytics_events
+         WHERE event_type = 'page_view' AND created_at >= ?
+         GROUP BY ip",
+        [$since]
+    ) as $row) {
+        $map[(string) $row['ip']] = (int) $row['n'];
+    }
+    return $map;
 }
 
 function mask_ip(string $ip): string
@@ -82,18 +89,6 @@ function referrer_host(string $referrer): string
     return str_contains($host, 'bareeda-injera.com') ? 'Internal' : $host;
 }
 
-/** Classify the device from a user agent (coarse, dashboard-level). */
-function device_class(string $ua): string
-{
-    if (preg_match('/ipad|tablet|kindle|silk/i', $ua)) {
-        return 'tablet';
-    }
-    if (preg_match('/mobi|android|iphone|ipod/i', $ua)) {
-        return 'mobile';
-    }
-    return 'desktop';
-}
-
 function addis_time(string $utc): string
 {
     return date('Y-m-d H:i', strtotime($utc . ' UTC'));
@@ -111,15 +106,25 @@ try {
             [$since]
         );
         $events = [];
+        $perIp = views_per_ip($db, $since);
         foreach ($rows as $row) {
-            $ua = (string) $row['user_agent'];
+            $ua      = (string) $row['user_agent'];
+            $ip      = (string) $row['ip'];
+            $country = strtoupper((string) $row['country']);
+            $isBot   = Analytics::isBotUserAgent($ua)
+                || ($ip !== '' && Analytics::isHostingIp($ip));
+            $isUnverified = !$isBot
+                && $row['event_type'] === 'page_view'
+                && $country !== 'ET'
+                && ($ip === '' || ($perIp[$ip] ?? 0) <= 1);
             $events[] = [
                 'type'     => $row['event_type'],
                 'path'     => (string) $row['path'],
-                'ip'       => mask_ip((string) $row['ip']),
+                'ip'       => mask_ip($ip),
                 'country'  => (string) $row['country'],
-                'device'   => device_class($ua),
-                'bot'      => is_bot_ua($ua),
+                'device'   => Analytics::deviceClass($ua),
+                'bot'      => $isBot || $isUnverified,
+                'unverified' => $isUnverified,
                 'referrer' => referrer_host((string) $row['referrer']),
                 'time'     => addis_time((string) $row['created_at']),
             ];
@@ -178,41 +183,16 @@ try {
     }
 
     // ── summary ────────────────────────────────────────────────
-    $totals = $db->fetchOne(
-        "SELECT
-            COALESCE(SUM(NOT ua_bot), 0) AS page_views,
-            COUNT(DISTINCT CASE WHEN NOT ua_bot THEN visitor_token END) AS visitors,
-            COUNT(DISTINCT CASE WHEN NOT ua_bot THEN ip END) AS unique_ips,
-            COALESCE(SUM(ua_bot), 0) AS bot_hits
-         FROM (
-             SELECT visitor_token, ip,
-                    COALESCE((user_agent REGEXP 'bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|lighthouse|python-requests|python-urllib|curl/|wget|go-http|java/|okhttp|scrapy|axios|node-fetch'), 0) AS ua_bot
-             FROM analytics_events
-             WHERE event_type = 'page_view' AND created_at >= ?
-         ) t",
-        [$since]
-    );
+    // Same classifier as the Telegram digest: bot user agent, hosting-provider
+    // reverse DNS and single-hit foreign IPs never reach the headline numbers.
+    $breakdown = Analytics::pageViewBreakdown($since, null, 8);
+    $totals    = $breakdown['totals'];
+    $topPages  = $breakdown['top_pages'];
 
-    $topPages = $db->query(
-        "SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_token) AS visitors
-         FROM analytics_events
-         WHERE event_type = 'page_view' AND created_at >= ?
-           AND NOT (user_agent REGEXP 'bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|lighthouse|python-requests|python-urllib|curl/|wget|go-http|java/|okhttp|scrapy|axios|node-fetch')
-         GROUP BY path ORDER BY views DESC LIMIT 8",
-        [$since]
-    );
-
-    $sources = $db->query(
-        "SELECT referrer, COUNT(*) AS hits
-         FROM analytics_events
-         WHERE event_type = 'page_view' AND created_at >= ?
-         GROUP BY referrer",
-        [$since]
-    );
     $sourceTotals = [];
-    foreach ($sources as $row) {
-        $host = referrer_host((string) $row['referrer']);
-        $sourceTotals[$host] = ($sourceTotals[$host] ?? 0) + (int) $row['hits'];
+    foreach ($breakdown['sources'] as $referrer => $hits) {
+        $host = referrer_host((string) $referrer);
+        $sourceTotals[$host] = ($sourceTotals[$host] ?? 0) + (int) $hits;
     }
     arsort($sourceTotals);
     $topSources = [];
@@ -220,15 +200,7 @@ try {
         $topSources[] = ['source' => $host, 'hits' => $hits];
     }
 
-    $devices = ['mobile' => 0, 'tablet' => 0, 'desktop' => 0];
-    foreach ($db->query(
-        "SELECT user_agent, COUNT(*) AS n FROM analytics_events
-         WHERE event_type = 'page_view' AND created_at >= ?
-         GROUP BY user_agent",
-        [$since]
-    ) as $row) {
-        $devices[device_class((string) $row['user_agent'])] += (int) $row['n'];
-    }
+    $devices = $breakdown['devices'];
 
     $funnel = $db->fetchOne(
         "SELECT
@@ -248,18 +220,13 @@ try {
         [$since]
     );
 
-    // Hourly series (Addis hours) for the selected range.
+    // Hourly series (Addis hours), confirmed traffic only.
     $series = [];
-    $buckets = $db->query(
-        "SELECT DATE_FORMAT(created_at + INTERVAL 3 HOUR, '%Y-%m-%d %H:00') AS bucket, COUNT(*) AS views
-         FROM analytics_events
-         WHERE event_type = 'page_view' AND created_at >= ?
-           AND NOT (user_agent REGEXP 'bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|lighthouse|python-requests|python-urllib|curl/|wget|go-http|java/|okhttp|scrapy|axios|node-fetch')
-         GROUP BY bucket ORDER BY bucket",
-        [$since]
-    );
-    foreach ($buckets as $row) {
-        $series[] = ['hour' => substr((string) $row['bucket'], 11, 5), 'views' => (int) $row['views']];
+    foreach ($breakdown['series'] as $bucket) {
+        $series[] = [
+            'hour'  => substr((string) $bucket['hour'], 11, 5),
+            'views' => (int) $bucket['views'],
+        ];
     }
 
     echo json_encode([
@@ -271,7 +238,10 @@ try {
             'page_views' => (int) ($totals['page_views'] ?? 0),
             'visitors'   => (int) ($totals['visitors'] ?? 0),
             'unique_ips' => (int) ($totals['unique_ips'] ?? 0),
-            'bot_hits'   => (int) ($totals['bot_hits'] ?? 0),
+            // Everything filtered out of page_views: page_views + bot_hits = raw.
+            'bot_hits'           => (int) ($totals['bot_hits'] ?? 0) + (int) ($totals['unverified'] ?? 0),
+            'bot_hits_ua'        => (int) ($totals['bot_hits'] ?? 0),
+            'unverified_foreign' => (int) ($totals['unverified'] ?? 0),
         ],
         'orders' => [
             'count'   => (int) ($orders['n'] ?? 0),

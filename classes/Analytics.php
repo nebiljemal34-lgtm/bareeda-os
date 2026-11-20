@@ -283,9 +283,9 @@ class Analytics
      * @param string      $sinceUtc inclusive, MySQL UTC datetime
      * @param string|null $untilUtc exclusive, MySQL UTC datetime
      */
-    public static function pageViewBreakdown(string $sinceUtc, ?string $untilUtc = null): array
+    public static function pageViewBreakdown(string $sinceUtc, ?string $untilUtc = null, int $topLimit = 5): array
     {
-        $sql = "SELECT path, ip, country, user_agent, visitor_token
+        $sql = "SELECT path, ip, country, user_agent, visitor_token, referrer, created_at
                 FROM analytics_events
                 WHERE event_type = 'page_view' AND created_at >= ?";
         $params = [$sinceUtc];
@@ -312,6 +312,10 @@ class Analytics
         $botIps = [];
         $unverifiedIps = [];
         $paths = [];
+        $pathTokens = [];
+        $series = [];
+        $sources = [];
+        $devices = ['mobile' => 0, 'tablet' => 0, 'desktop' => 0];
         $flags = [];
 
         foreach ($rows as $row) {
@@ -348,16 +352,37 @@ class Analytics
             }
             $path = (string) $row['path'];
             $paths[$path] = ($paths[$path] ?? 0) + 1;
+            $pathTokens[$path][(string) $row['visitor_token']] = true;
+
+            $createdUtc = (string) ($row['created_at'] ?? '');
+            if ($createdUtc !== '') {
+                $hour = date('Y-m-d H:00', strtotime($createdUtc . ' UTC'));
+                $series[$hour] = ($series[$hour] ?? 0) + 1;
+            }
+            $referrer = (string) ($row['referrer'] ?? '');
+            $sources[$referrer] = ($sources[$referrer] ?? 0) + 1;
+            $devices[self::deviceClass((string) ($row['user_agent'] ?? ''))]++;
         }
 
         arsort($paths);
         $topPages = [];
         foreach ($paths as $path => $views) {
-            $topPages[] = ['path' => $path, 'views' => $views];
-            if (count($topPages) >= 5) {
+            $topPages[] = [
+                'path'     => $path,
+                'views'    => $views,
+                'visitors' => count($pathTokens[$path] ?? []),
+            ];
+            if (count($topPages) >= max(1, $topLimit)) {
                 break;
             }
         }
+
+        ksort($series);
+        $seriesOut = [];
+        foreach ($series as $hour => $views) {
+            $seriesOut[] = ['hour' => $hour, 'views' => $views];
+        }
+        arsort($sources);
 
         return [
             'totals' => [
@@ -370,8 +395,23 @@ class Analytics
                 'unverified_ips' => count($unverifiedIps),
             ],
             'top_pages' => $topPages,
+            'series'    => $seriesOut,
+            'sources'   => $sources,
+            'devices'   => $devices,
             'ip_flags'  => $flags,
         ];
+    }
+
+    /** Coarse device class from a user agent (dashboard-level). */
+    public static function deviceClass(string $userAgent): string
+    {
+        if (preg_match('/ipad|tablet|kindle|silk/i', $userAgent)) {
+            return 'tablet';
+        }
+        if (preg_match('/mobi|android|iphone|ipod/i', $userAgent)) {
+            return 'mobile';
+        }
+        return 'desktop';
     }
 
     /** Reverse DNS with an on-disk cache (digest runs are hourly, not hot). */
