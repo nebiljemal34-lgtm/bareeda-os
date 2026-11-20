@@ -52,7 +52,7 @@ foreach ($rows as $row) {
         $row['event_type'],
         substr((string) $row['path'], 0, 28),
         ($row['ip'] ?: '-') . ($row['country'] ? ' (' . $row['country'] . ')' : ''),
-        substr((string) $row['created_at'], 5, 14)
+        date('H:i', strtotime((string) $row['created_at'] . ' UTC')) . ' Addis'
     );
 }
 

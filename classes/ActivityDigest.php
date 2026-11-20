@@ -68,8 +68,10 @@ class ActivityDigest
 
         $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 
+        // $since is UTC; date() renders in Addis, so both labels are local.
+        $startLabel = date('H:i', strtotime($since . ' UTC'));
         $lines   = [];
-        $lines[] = '<b>' . $title . '</b> — ' . date('H:00') . '–' . date('H:i');
+        $lines[] = '<b>' . $title . '</b> — ' . $startLabel . '–' . date('H:i') . ' (Addis)';
         $lines[] = '';
         $lines[] = '👁 Page views: ' . (int) ($traffic['page_views'] ?? 0)
             . ' · Visitors: ' . (int) ($traffic['visitors'] ?? 0)
@@ -94,7 +96,7 @@ class ActivityDigest
             $lines[] = '<b>New IP addresses</b>';
             foreach ($newIps as $row) {
                 $country = (string) ($row['country'] ?? '') !== '' ? ' (' . $row['country'] . ')' : '';
-                $lines[] = '• ' . $e($row['ip']) . $country . ' — ' . date('H:i', strtotime((string) $row['first_seen']));
+                $lines[] = '• ' . $e($row['ip']) . $country . ' — ' . date('H:i', strtotime((string) $row['first_seen'] . ' UTC')) . ' (Addis)';
             }
         } else {
             $lines[] = '';
